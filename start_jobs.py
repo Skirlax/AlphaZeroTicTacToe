@@ -19,7 +19,7 @@ def main():
     parser_ = argparse.ArgumentParser(
         description="Start optuna optimization jobs"
     )
-    parser_.add_argument("n", help="Number of processes to start. Use -1 for all - 2 cores.")
+    parser_.add_argument("n", help="Number of processes to start.")
     parser_.add_argument("t", help="Number of trials to run.")
     parser_.add_argument("-s", "--storage", help="The storage string to use.")
     parser_.add_argument("-n", "--study_name", help="The name of the optuna study to use.")
