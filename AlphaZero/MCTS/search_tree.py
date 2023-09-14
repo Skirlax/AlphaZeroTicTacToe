@@ -16,9 +16,7 @@ class McSearchTree:
         state = self.game_manager.reset()
         current_player = 1
         game_history = []
-        wins_player_one = 0
-        wins_player_minus_one = 0
-        draws = 0
+        results = {"1": 0, "-1": 0, "D": 0}
         while True:
             pi, _ = self.search(network, state, current_player, device)
             move = self.game_manager.select_move(pi, tau=tau)
@@ -30,16 +28,13 @@ class McSearchTree:
             state = self.game_manager.get_board()
             r = self.game_manager.game_result(current_player, state)
             if r is not None:
-                if r == 1 and current_player == 1:
-                    wins_player_one += 1
-                elif r == 1 and current_player == -1:
-                    wins_player_minus_one += 1
-                elif r == -1 and current_player == 1:
-                    wins_player_minus_one += 1
-                elif r == -1 and current_player == -1:
-                    wins_player_one += 1
+                if r == current_player:
+                    results["1"] += 1
                 elif -1 < r < 1:
-                    draws += 1
+                    results["D"] += 1
+                else:
+                    results["-1"] += 1
+
                 if -1 < r < 1:
                     game_history = [(x[0], x[1], r, x[3]) for x in game_history]
                 else:
@@ -49,7 +44,7 @@ class McSearchTree:
 
         # game_history = make_channels(game_history)
         game_history = augment_experience_with_symmetries(game_history, self.game_manager.board_size)
-        return game_history, wins_player_one, wins_player_minus_one, draws
+        return game_history, results["1"], results["-1"], results["D"]
 
     def search(self, network, state, current_player, device):
         """
