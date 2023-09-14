@@ -107,13 +107,8 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
     :param study_name: Name of the study to use.
     :return:
     """
-    from AlphaZero.Network.trainer import Trainer  # import here to avoid circular imports
-
-    trial_args = DotDict(test_args)
-    trial_args.show_tqdm = False
 
     def objective(trial):
-        # dropout = trial.suggest_float("dropout", 0.1, 0.5)
         num_mc_simulations = trial.suggest_int("num_mc_simulations", 60, 1600)
         num_self_play_games = trial.suggest_int("num_self_play_games", 50, 200)
         num_epochs = trial.suggest_int("num_epochs", 100, 400)
@@ -139,5 +134,9 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
         del trainer
         return win_freq
 
+    from AlphaZero.Network.trainer import Trainer  # import here to avoid circular imports
+
+    trial_args = DotDict(test_args)
+    trial_args.show_tqdm = False
     study = optuna.load_study(study_name=study_name, storage=storage)
     study.optimize(objective, n_trials=n_trials)

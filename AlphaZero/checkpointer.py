@@ -3,7 +3,6 @@ import os
 import torch as th
 
 from AlphaZero.utils import find_project_root
-# from AlphaZero.Network.nnet import TicTacToeNet
 from mem_buffer import MemBuffer
 
 

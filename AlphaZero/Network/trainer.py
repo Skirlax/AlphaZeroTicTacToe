@@ -39,7 +39,6 @@ class Trainer:
         self.optimizer = optimizer
         self.memory = memory
         self.summary_writer = SummaryWriter("Logs/AlphaZero")
-        # self.pi_loss_fn = lambda y_hat, y: -th.sum(y * th.log(y_hat)) / y.size()[0]
         self.mse_loss = th.nn.MSELoss()
         self.arena = Arena(self.game_manager, self.args, self.device)
         self.checkpointer = checkpointer
@@ -96,6 +95,7 @@ class Trainer:
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
     def pi_loss(self, y_hat, y):
+        # 1e-9 is added to prevent log(0).
         return -th.sum(y * th.log(y_hat + 1e-9)) / y.size()[0]
 
     def train(self) -> TicTacToeNet:
@@ -201,7 +201,6 @@ class Trainer:
         return self.network
 
     def only_pit(self, p1: Player, p2: Player, num_games: int):
-        # check if both players are net players
         if p1 == NetPlayer and p2 == NetPlayer:
             p1_manager = GameManager(self.args["board_size"], self.headless)
             p1_tree = McSearchTree(p1_manager, self.args)
@@ -209,6 +208,8 @@ class Trainer:
             p2_tree = McSearchTree(p2_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_manager)
             p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
+
+        # TODO: Handle other cases.
 
         num_simulations = self.args["num_simulations"]
         self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
@@ -317,6 +318,7 @@ class Trainer:
             return iterable
 
     def get_network_mem_size(self):
+        # This is approximate and doesn't consider peak usage.
         mem_params = sum([param.nelement() * param.element_size() for param in self.network.parameters()])
         mem_bufs = sum([buf.nelement() * buf.element_size() for buf in self.network.buffers()])
         return (mem_params + mem_bufs) / (1024 ** 2)
