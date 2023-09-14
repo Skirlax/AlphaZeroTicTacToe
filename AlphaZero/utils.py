@@ -1,0 +1,143 @@
+import os
+
+import numpy as np
+import optuna
+
+from AlphaZero.constants import SAMPLE_ARGS as test_args
+
+
+class DotDict(dict):
+    def __getattr__(self, name):
+        return self[name]
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+
+def augment_experience_with_symmetries(game_experience: list, board_size) -> list:
+    game_experience_ = []
+    for state, pi, v, _ in game_experience:
+        pi = np.array([x for x in pi.values()])
+        game_experience_.append((state, pi, v))
+        for axis, k in zip([0, 1], [1, 3]):
+            state_ = np.rot90(state.copy(), k=k)
+            pi_ = np.rot90(pi.copy().reshape(board_size, board_size), k=k).flatten()
+            game_experience_.append((state_, pi_, v))
+            state_ = np.flip(state.copy(), axis=axis)
+            pi_ = np.flip(pi.copy().reshape(board_size, board_size), axis=axis).flatten()
+            game_experience_.append((state_, pi_, v))
+
+    return game_experience_
+
+
+def rotate_stack(state: np.ndarray, k: int):
+    for dim in range(state.shape[0]):
+        state[dim] = np.rot90(state[dim], k=k)
+    return state
+
+
+def flip_stack(state: np.ndarray, axis: int):
+    for dim in range(state.shape[0]):
+        state[dim] = np.flip(state[dim], axis=axis)
+    return state
+
+
+def make_channels(game_experience: list):
+    experience = []
+    for state, pi, v, current_player, move in game_experience:
+        state = make_channels_from_single(state)
+        experience.append((state, pi, v, current_player, move))
+
+    return experience
+
+
+def make_channels_from_single(state: np.ndarray):
+    player_one_state = np.where(state == 1, 1, 0)  # fill with 1 where player 1 has a piece else 0
+    player_minus_one_state = np.where(state == -1, 1, 0)  # fill with 1 where player -1 has a piece else 0
+    empty_state = np.where(state == 0, 1, 0)  # fill with 1 where empty spaces else 0
+    return np.stack([state, player_one_state, player_minus_one_state, empty_state], axis=0)
+
+
+def mask_invalid_actions(probabilities: np.ndarray, observations: np.ndarray, board_size) -> np.ndarray:
+    to_print = ""  # for debugging
+    mask = np.where(observations != 0, -5, observations)
+    mask = np.where(mask == 0, 1, mask)
+    mask = np.where(mask == -5, 0, mask)
+    valids = probabilities * mask.reshape(-1, board_size ** 2)
+    valids_sum = valids.sum()
+    if valids_sum == 0:
+        # When no valid moves are available (shouldn't happen) sum of valids is 0, making the returned valids an array
+        # of nan's (result of division by zero). In this case, we create a uniform probability distribution.
+        to_print += f"Sum of valid probabilities is 0. Creating a uniform probability...\nMask:\n{mask}"
+        valids = np.full(valids.shape, 1.0 / np.prod(valids.shape))
+    else:
+        valids = valids / valids_sum  # normalize
+
+    if len(to_print) > 0:
+        print(to_print, file=open("masking_message.txt", "w"))
+    return valids
+
+
+def check_args(args: dict):
+    required_keys = ["num_net_channels", "num_net_in_channels", "net_dropout", "net_action_size", "num_simulations",
+                     "self_play_games", "num_iters", "epochs", "lr", "max_buffer_size", "num_pit_games",
+                     "random_pit_freq", "board_size", "batch_size", "tau", "c", "checkpoint_dir", "update_threshold"]
+
+    for key in required_keys:
+        if key not in args:
+            raise KeyError(f"Missing key {key} in args dict. Please supply all required keys.\n"
+                           f"Required keys: {required_keys}.")
+
+
+def find_project_root() -> str:
+    while "root.root" not in os.listdir(os.getcwd()):
+        os.chdir("..")
+    return os.getcwd()
+
+
+def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, study_name: str):
+    """
+    Performs a hyperparameter search using optuna. This method is meant to be called using the start_jobs.py script.
+    For this method to work, a mysql database must be running on the storage address and an optuna study with the
+    given name and the 'maximize' direction must exist.
+
+    :param n_trials: num of trials to run the search for.
+    :param init_net_path: The path to the initial network to use for all trials.
+    :param storage: The mysql storage string. Specifies what database to use.
+    :param study_name: Name of the study to use.
+    :return:
+    """
+    from AlphaZero.Network.trainer import Trainer  # import here to avoid circular imports
+
+    trial_args = DotDict(test_args)
+    trial_args.show_tqdm = False
+
+    def objective(trial):
+        # dropout = trial.suggest_float("dropout", 0.1, 0.5)
+        num_mc_simulations = trial.suggest_int("num_mc_simulations", 60, 1600)
+        num_self_play_games = trial.suggest_int("num_self_play_games", 50, 200)
+        num_epochs = trial.suggest_int("num_epochs", 100, 400)
+        lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
+        temp = trial.suggest_float("temp", 0.5, 1.5)
+        arena_temp = trial.suggest_float("arena_temp", 1e-2, 0.5)
+        cpuct = trial.suggest_float("cpuct", 0.5, 5)
+
+        trial_args.num_simulations = num_mc_simulations
+        trial_args.self_play_games = num_self_play_games
+        trial_args.epochs = num_epochs
+        trial_args.lr = lr
+        trial_args.tau = temp
+        trial_args.c = cpuct
+        trial_args.arena_tau = arena_temp
+
+        trainer = Trainer.from_state_dict(init_net_path, trial_args)
+        print(f"Trial {trial.number} started.")
+        trainer.train()
+        win_freq = trainer.get_arena_win_frequencies_mean()
+        trial.report(win_freq, trial.number)
+        print(f"Trial {trial.number} finished with win freq {win_freq}.")
+        del trainer
+        return win_freq
+
+    study = optuna.load_study(study_name=study_name, storage=storage)
+    study.optimize(objective, n_trials=n_trials)

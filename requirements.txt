@@ -1,0 +1,18 @@
+# numpy~=1.23.5
+numpy
+pygame~=2.1.3
+gym~=0.26.2
+typing~=3.7.4.3
+# torch~=2.0.0+cu117
+optuna~=3.2.0
+tensorboard
+gym[accept-rom-license, atari]
+scikit-image
+torchviz
+stable-baselines3
+sb3-contrib
+emoji
+mysqlclient
+mysql-connector-python
+joblib
+dill
