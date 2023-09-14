@@ -9,6 +9,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 
 def find_biggest_divisor(n: int, t: int) -> int:
+    # Might be used for spawning processes in the future.
     if t % n == 0:
         return n
     return find_biggest_divisor(n - 1, t)
