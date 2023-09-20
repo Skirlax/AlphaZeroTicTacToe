@@ -32,8 +32,19 @@ def main_alpha_zero():
 
     # !!! Use found args !!!
 
+    # args.num_simulations = 61
+    args.num_simulations = 61
+    args.self_play_games = 3
+    args.epochs = 367
+    args.lr = 0.005780136481104179
+    args.tau = 1.4372041430104254
+    args.c = 1.213380582004565
+    args.arena_tau = 0.4699876438575174
+    args.num_iters = 3
+
     trainer = Trainer.create(args)
     trainer.train()
+    trainer.save_latest("Checkpoints/AlphaZero")
 
 
 if __name__ == "__main__":

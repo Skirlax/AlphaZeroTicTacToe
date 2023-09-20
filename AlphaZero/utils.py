@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import optuna
+import torch as th
 
 from AlphaZero.constants import SAMPLE_ARGS as test_args
 
@@ -63,7 +64,7 @@ def mask_invalid_actions(probabilities: np.ndarray, observations: np.ndarray, bo
     mask = np.where(observations != 0, -5, observations)
     mask = np.where(mask == 0, 1, mask)
     mask = np.where(mask == -5, 0, mask)
-    valids = probabilities * mask.reshape(-1, board_size ** 2)
+    valids = probabilities.reshape(-1,board_size ** 2) * mask.reshape(-1, board_size ** 2)
     valids_sum = valids.sum()
     if valids_sum == 0:
         # When no valid moves are available (shouldn't happen) sum of valids is 0, making the returned valids an array
@@ -76,6 +77,18 @@ def mask_invalid_actions(probabilities: np.ndarray, observations: np.ndarray, bo
     if len(to_print) > 0:
         print(to_print, file=open("masking_message.txt", "w"))
     return valids
+
+
+def mask_invalid_actions_batch(states: th.tensor) -> th.tensor:
+    masks = []
+    for state in states:
+        np_state = state.detach().cpu().numpy()
+        mask = np.where(np_state != 0, -5, np_state)
+        mask = np.where(mask == 0, 1, mask)
+        mask = np.where(mask == -5, 0, mask)
+        masks.append(mask)
+
+    return th.tensor(np.array(masks), dtype=th.float32).squeeze(1)
 
 
 def check_args(args: dict):
@@ -124,6 +137,7 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
         trial_args.tau = temp
         trial_args.c = cpuct
         trial_args.arena_tau = arena_temp
+        trial_args.num_iters = 5
 
         trainer = Trainer.from_state_dict(init_net_path, trial_args)
         print(f"Trial {trial.number} started.")
