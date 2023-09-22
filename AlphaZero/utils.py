@@ -108,6 +108,15 @@ def find_project_root() -> str:
     return os.getcwd()
 
 
+def calculate_board_win_positions(n: int, k: int):
+    return get_num_horizontal_conv_slides(n, k) * (n * 2 + 2) + 4 * sum(
+        [get_num_horizontal_conv_slides(x, k) for x in range(k + 1, n - 1)]) + 4
+
+
+def get_num_horizontal_conv_slides(board_size: int, kernel_size: int) -> int:
+    return (board_size - kernel_size) + 1
+
+
 def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, study_name: str):
     """
     Performs a hyperparameter search using optuna. This method is meant to be called using the start_jobs.py script.

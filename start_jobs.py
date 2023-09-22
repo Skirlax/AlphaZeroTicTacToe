@@ -47,7 +47,7 @@ def main():
     procs = []
     for i in range(n):
         procs.append(subprocess.Popen(
-            ["python", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
+            ["python3.10", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
     for proc in procs:
         proc.wait()
 

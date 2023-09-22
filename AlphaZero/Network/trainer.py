@@ -13,7 +13,7 @@ from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
-from AlphaZero.utils import check_args, DotDict,mask_invalid_actions,mask_invalid_actions_batch
+from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch
 from Game.game import GameManager
 from mem_buffer import MemBuffer
 
@@ -32,7 +32,8 @@ class Trainer:
         self.args = args
         self.device = device
         self.headless = headless
-        self.game_manager = GameManager(board_size=self.args["board_size"], headless=headless)
+        self.game_manager = GameManager(board_size=self.args.board_size, headless=headless,
+                                        num_to_win=self.args.num_to_win)
         self.mcts = McSearchTree(self.game_manager, self.args)
         self.network = network
         self.opponent_network = build_net_from_args(args, device)
@@ -94,7 +95,7 @@ class Trainer:
         net.load_state_dict(th.load(path))
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
-    def pi_loss(self, y_hat, y,masks):
+    def pi_loss(self, y_hat, y, masks):
         y_hat_log = th.log(y_hat)
         masks = masks.reshape(y_hat_log.shape).to(self.device)
         y_hat_log = masks * y_hat_log
@@ -284,7 +285,7 @@ class Trainer:
                 v = th.tensor(v, dtype=th.float32, device=self.device).unsqueeze(1)
                 pi_pred, v_pred = self.network(states)
                 masks = mask_invalid_actions_batch(states)
-                loss = self.mse_loss(v_pred, v) + self.pi_loss(pi_pred, pi,masks)
+                loss = self.mse_loss(v_pred, v) + self.pi_loss(pi_pred, pi, masks)
                 losses.append(loss.item())
                 self.summary_writer.add_scalar("Loss", loss.item(), i * epochs + epoch)
 

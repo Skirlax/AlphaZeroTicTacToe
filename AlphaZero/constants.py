@@ -1,5 +1,4 @@
 
-
 # File for storing constants
 
 
@@ -26,9 +25,5 @@ SAMPLE_ARGS = {
         "max_depth": float("inf"),
         "show_tqdm": True,
         "num_workers": 3,
+        "num_to_win": 3
     }
-
-
-
-
-

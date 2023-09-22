@@ -9,12 +9,11 @@ class GameManager:
     This class is the game manager for the game of Tic Tac Toe and its variants.
     """
 
-    def __init__(self, board_size: int, headless: bool) -> None:
-        # TODO: Implement iteration over ALL diagonals to support partial wins (num_to_win < board_size).
+    def __init__(self, board_size: int, headless: bool,num_to_win=None) -> None:
         # TODO: Implement the possibility to play over internet using sockets.
         self.player = 1
         self.enemy_player = -1
-        self.num_to_win = board_size
+        self.num_to_win = self.init_num_to_win(num_to_win)
         self.board_size = board_size
         self.board = self.initialize_board()
         self.headless = headless
@@ -22,6 +21,13 @@ class GameManager:
 
     def play(self, player: int, index: tuple) -> None:
         self.board[index] = player
+
+    def init_num_to_win(self, num_to_win: int | None) -> int:
+        if num_to_win is None:
+            num_to_win = self.board_size
+        if num_to_win > self.board_size:
+            raise Exception("Num to win can't be greater than board size")
+        return num_to_win
 
     def initialize_board(self):
         board = np.zeros((self.board_size, self.board_size), dtype=np.int8)
@@ -65,6 +71,29 @@ class GameManager:
         results.append(func(np.fliplr(arr).diagonal().reshape(-1)))
         return results
 
+    def full_iterate_array_all_diags(self, arr: np.ndarray, func: callable):
+
+        results = []
+        for row in arr:
+            results.append(func(row.reshape(-1)))
+
+        for col in arr.T:
+            results.append(func(col.reshape(-1)))
+
+        diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        for diag in diags:
+            if diag.size < self.num_to_win:
+                continue
+            results.append(func(diag.reshape(-1)))
+
+        return results
+
+    def check_win(self, player: int, board=None) -> bool:
+        if self.num_to_win == self.board_size:
+            return self.check_full_win(player, board=board)
+        else:
+            return self.check_partial_win(player, self.num_to_win, board=board)
+
     def check_full_win(self, player: int, board=None) -> bool:
         """
         This function checks if the supplied player has won the game with a full win (num_to_win == board_size).
@@ -90,14 +119,12 @@ class GameManager:
         :param board: The board to check on. If None, the current board is used.
         :return: True if the player has won, False otherwise.
         """
-        raise NotImplementedError("This will be usable when the full_iterate_array function iterates over ALL "
-                                  "diagonals.")
         if board is None:
             board = self.get_board()
-        matches = self.full_iterate_array(board,
-                                          lambda part:
-                                          np.convolve((part == player), np.ones(n, dtype=np.int),
-                                                      "valid"))
+        matches = self.full_iterate_array_all_diags(board,
+                                                    lambda part:
+                                                    np.convolve((part == player), np.ones(n, dtype=np.int8),
+                                                                "valid"))
 
         for match in matches:
             if np.any(match == n):
@@ -210,9 +237,9 @@ class GameManager:
         :param board: The board to check on. If None, the current board is used.
         :return: The game result. None when the game is not over yet.
         """
-        if self.check_full_win(player, board=board):
+        if self.check_win(player, board=board):
             return 1.0
-        elif self.check_full_win(-player, board=board):
+        elif self.check_win(-player, board=board):
             return -1.0
         elif self.is_board_full(board=board):
             return 1e-4
