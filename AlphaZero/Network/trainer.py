@@ -96,7 +96,7 @@ class Trainer:
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
     def pi_loss(self, y_hat, y, masks):
-        y_hat_log = th.log(y_hat)
+        y_hat_log = th.log(y_hat + self.args.log_epsilon)
         masks = masks.reshape(y_hat_log.shape).to(self.device)
         y_hat_log = masks * y_hat_log
         return -th.sum(y * y_hat_log) / y.size()[0]
@@ -115,8 +115,16 @@ class Trainer:
         for i in self.make_tqdm_bar(range(num_iters), "Training Progress", 0):
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
-                wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
-                # wins_p1, wins_p2, game_draws = self_play(self.network, self_play_games, self.mcts, self.device)
+                # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
+                wins_p1, wins_p2, game_draws = 0, 0, 0
+                for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
+                    game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
+                    # print(f"Game {j + 1} finished.")
+                    self.mcts.step_root(None)  # reset the search tree
+                    self.memory.add_list(game_history)
+                    wins_p1 += wins_one
+                    wins_p2 += wins_minus_one
+                    game_draws += draws
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
 
             self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)

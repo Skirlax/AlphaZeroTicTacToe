@@ -41,7 +41,7 @@ class NetPlayer(Player):
                            "tau")
 
         pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device)
-        move = self.game_manager.select_move(pi, tau=tau)
+        move = self.game_manager.select_move(pi)
         self.monte_carlo_tree_search.step_root(None)
         return self.game_manager.network_to_board(move)
 

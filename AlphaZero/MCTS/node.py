@@ -1,6 +1,8 @@
 import math
+import random
 
 import numpy as np
+from Game.game import GameManager
 
 
 class Node:
@@ -86,11 +88,20 @@ class Node:
         # Not important for the algorithm, but might be useful for debugging.
         return self.total_value / self.times_visited if self.times_visited > 0 else 0
 
-    def get_self_action_probabilities(self):
+    def get_self_action_probabilities(self, tau=1.0):
         total_times_visited = self.times_visited
         action_probs = {}
-
+        # action_probs = dict.fromkeys(self.children.keys(), 0)
         for action, child in self.children.items():
             action_probs[action] = child.times_visited / total_times_visited
 
-        return action_probs
+        # any_is_zero = any([x == 0 for x in action_probs.values()])
+        # any_is_zero
+
+        # random_idx = random.randint(0, len(action_probs) - 2)
+        # action_probs[random_idx] = 0.9 ** 1e-15
+        # rem = 1 - (0.9 ** 1e-15)
+        # action_probs[random_idx + 1] = rem
+        # print(sum(action_probs.values()))
+
+        return GameManager.adjust_probabilities(action_probs, tau=tau)

@@ -29,7 +29,7 @@ def main():
     t = int(args.t)
     storage = args.storage
     if storage is None:
-        storage = "mysql://root@localhost/alpha_zero"
+        storage = "mysql://root:584792@localhost/alpha_zero"
     study_name = args.study_name
     if study_name is None:
         study_name = "alpha_zero"

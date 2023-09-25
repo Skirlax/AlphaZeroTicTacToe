@@ -9,14 +9,14 @@ class GameManager:
     This class is the game manager for the game of Tic Tac Toe and its variants.
     """
 
-    def __init__(self, board_size: int, headless: bool,num_to_win=None) -> None:
+    def __init__(self, board_size: int, headless: bool, num_to_win=None) -> None:
         # TODO: Implement the possibility to play over internet using sockets.
         self.player = 1
         self.enemy_player = -1
-        self.num_to_win = self.init_num_to_win(num_to_win)
         self.board_size = board_size
         self.board = self.initialize_board()
         self.headless = headless
+        self.num_to_win = self.init_num_to_win(num_to_win)
         self.screen = self.create_screen(headless)
 
     def play(self, player: int, index: tuple) -> None:
@@ -265,7 +265,7 @@ class GameManager:
         return board_
 
     @staticmethod
-    def select_move(action_probs: dict, tau=1.0):
+    def adjust_probabilities(action_probs: dict, tau=1.0) -> dict:
         """
         Selects a move from the action probabilities using either greedy or stochastic policy.
         The stochastic policy uses the tau parameter to adjust the probabilities. This is based on the
@@ -276,13 +276,22 @@ class GameManager:
         :return: The selected move as an integer (index).
         """
         if tau == 0:  # select greedy
-            return max(action_probs, key=action_probs.get)  # return the key with max value
+            vals = [x for x in action_probs.values()]
+            max_idx = vals.index(max(vals))
+            probs = [0 for _ in range(len(vals))]
+            probs[max_idx] = 1
+            return dict(zip(action_probs.keys(), probs))
         else:  # select stochastic
             moves, probabilities = zip(*action_probs.items())
             adjusted_probs = [prob ** (1 / tau) for prob in probabilities]
             adjusted_probs_sum = sum(adjusted_probs)
             normalized_probs = [prob / adjusted_probs_sum for prob in adjusted_probs]
-            return np.random.choice(moves, p=normalized_probs)
+            return dict(zip(moves, normalized_probs))
+
+    @staticmethod
+    def select_move(action_probs: dict):
+        moves, probs = zip(*action_probs.items())
+        return np.random.choice(moves, p=probs)
 
     def __str__(self):
         return str(self.board).replace('1', 'X').replace('-1', 'O')

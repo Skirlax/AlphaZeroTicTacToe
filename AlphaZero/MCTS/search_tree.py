@@ -1,12 +1,12 @@
 import torch as th
 
 from AlphaZero.MCTS.node import Node
-from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions
+from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions,DotDict
 from Game.game import GameManager
 
 
 class McSearchTree:
-    def __init__(self, game_manager: GameManager, args: dict):
+    def __init__(self, game_manager: GameManager, args: DotDict):
         self.game_manager = game_manager
         self.args = args
         self.root_node = None
@@ -19,7 +19,7 @@ class McSearchTree:
         results = {"1": 0, "-1": 0, "D": 0}
         while True:
             pi, _ = self.search(network, state, current_player, device)
-            move = self.game_manager.select_move(pi, tau=tau)
+            move = self.game_manager.select_move(pi)
             # self.step_root([move])
             self.step_root(None)
             self.game_manager.play(current_player, self.game_manager.network_to_board(move))
@@ -84,6 +84,7 @@ class McSearchTree:
                                                           current_node.parent.current_player)
             next_state_ = self.game_manager.get_canonical_form(next_state, current_node.current_player)
             v = self.game_manager.game_result(current_node.current_player, next_state)
+            # None
             if v is None:
                 # next_state_ = make_channels_from_single(next_state_)
                 next_state_ = th.tensor(next_state_, dtype=th.float32, device=device).unsqueeze(0)
@@ -95,7 +96,7 @@ class McSearchTree:
 
             self.backprop(v, path)
 
-        return self.root_node.get_self_action_probabilities(), self.root_node.get_self_value()
+        return self.root_node.get_self_action_probabilities(tau=self.args["tau"]), self.root_node.get_self_value()
 
     def backprop(self, v, path):
         for node in reversed(path):

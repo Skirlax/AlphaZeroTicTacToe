@@ -38,13 +38,13 @@ def main_alpha_zero():
     args.epochs = 367
     args.lr = 0.005780136481104179
     args.tau = 1.4372041430104254
-    args.c = 1.213380582004565
+    args.c = 1
     args.arena_tau = 0.4699876438575174
     args.num_iters = 3
 
     trainer = Trainer.create(args)
     trainer.train()
-    trainer.save_latest("Checkpoints/AlphaZero")
+    # trainer.save_latest("Checkpoints/AlphaZero")
 
 
 if __name__ == "__main__":

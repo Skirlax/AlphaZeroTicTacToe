@@ -24,6 +24,7 @@ def augment_experience_with_symmetries(game_experience: list, board_size) -> lis
             state_ = np.rot90(state.copy(), k=k)
             pi_ = np.rot90(pi.copy().reshape(board_size, board_size), k=k).flatten()
             game_experience_.append((state_, pi_, v))
+            del state_, pi_
             state_ = np.flip(state.copy(), axis=axis)
             pi_ = np.flip(pi.copy().reshape(board_size, board_size), axis=axis).flatten()
             game_experience_.append((state_, pi_, v))
@@ -110,7 +111,7 @@ def find_project_root() -> str:
 
 def calculate_board_win_positions(n: int, k: int):
     return get_num_horizontal_conv_slides(n, k) * (n * 2 + 2) + 4 * sum(
-        [get_num_horizontal_conv_slides(x, k) for x in range(k + 1, n - 1)]) + 4
+        [get_num_horizontal_conv_slides(x, k) for x in range(k, n)])
 
 
 def get_num_horizontal_conv_slides(board_size: int, kernel_size: int) -> int:
@@ -138,6 +139,7 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
         temp = trial.suggest_float("temp", 0.5, 1.5)
         arena_temp = trial.suggest_float("arena_temp", 1e-2, 0.5)
         cpuct = trial.suggest_float("cpuct", 0.5, 5)
+        log_epsilon = trial.suggest_float("log_epsilon", 1e-10, 1e-7, log=True)
 
         trial_args.num_simulations = num_mc_simulations
         trial_args.self_play_games = num_self_play_games
@@ -147,6 +149,7 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
         trial_args.c = cpuct
         trial_args.arena_tau = arena_temp
         trial_args.num_iters = 5
+        trial_args.log_epsilon = log_epsilon
 
         trainer = Trainer.from_state_dict(init_net_path, trial_args)
         print(f"Trial {trial.number} started.")
@@ -163,3 +166,5 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
     trial_args.show_tqdm = False
     study = optuna.load_study(study_name=study_name, storage=storage)
     study.optimize(objective, n_trials=n_trials)
+
+
