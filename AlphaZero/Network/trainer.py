@@ -68,13 +68,18 @@ class Trainer:
         return cls(network, optimizer, memory, args, checkpointer, device, headless=headless)
 
     @classmethod
-    def from_latest(cls, path: str, args: dict, headless: bool = True, checkpointer_verbose: bool = False):
+    def from_latest(cls, path: str, headless: bool = True, checkpointer_verbose: bool = False):
         data = th.load(path)
+
+        args = data.pop("args")
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         network, optimizer, _ = build_all_from_args(args, device, lr=data["lr"])
         del _
+        opponent_network = build_net_from_args(args, device)
+        opponent_network.load_state_dict(data.pop("opponent_state_dict"))
         network.load_state_dict(data.pop('state_dict'))
         optimizer.load_state_dict(data.pop('optimizer_state_dict'))
+
         memory = data.pop("memory")
         args["lr"] = data.pop("lr")
         checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
@@ -314,12 +319,15 @@ class Trainer:
 
     def save_latest(self, path):
         state_dict = self.network.state_dict()
+        opponent_state_dict = self.opponent_network.state_dict()
         optimizer_state_dict = self.optimizer.state_dict()
         th.save({
             'optimizer_state_dict': optimizer_state_dict,
             'memory': self.memory,
             'lr': self.args["lr"],
-            'state_dict': state_dict
+            'state_dict': state_dict,
+            'opponent_state_dict': opponent_state_dict,
+            'args': self.args
         }, path)
         print("Saved latest model data to {}".format(path))
 

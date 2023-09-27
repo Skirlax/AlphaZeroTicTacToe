@@ -41,10 +41,11 @@ def main_alpha_zero():
     args.c = 1.7409658274805089
     args.arena_tau = 0.04139160592420218
     args.num_iters = 15
+    args.log_epsilon = 1.4165210108199043e-08
 
     trainer = Trainer.create(args)
     trainer.train()
-    # trainer.save_latest("Checkpoints/AlphaZero")
+    trainer.save_latest("Checkpoints/AlphaZero/latest.pth")
 
 
 if __name__ == "__main__":
