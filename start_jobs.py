@@ -34,7 +34,7 @@ def main():
     if study_name is None:
         study_name = "alpha_zero"
 
-    init_net_path = "Checkpoints/NetVersions/h_search_network.pth"
+    init_net_path = "BackupFiles/h_search_network.pth"
 
     print(f"Starting optuna optimization. Using parameters: \n"
           f"Number of parallel processes: {n}\n"

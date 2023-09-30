@@ -47,8 +47,13 @@ class NetPlayer(Player):
 
 
 class HumanPlayer(Player):
-    def __init__(self):
+    def __init__(self,game_manager: GameManager):
         self.name = "HumanPlayer"
+        self.game_manager = game_manager
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
-        pass
+        if self.game_manager.headless:
+            raise RuntimeError("Cannot play with a human player in headless mode.")
+        move = self.game_manager.get_human_input(board)
+        return move
+

@@ -13,7 +13,7 @@ from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
-from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch
+from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args
 from Game.game import GameManager
 from mem_buffer import MemBuffer
 
@@ -192,7 +192,8 @@ class Trainer:
             if p1_wins / wins_total > update_threshold:
                 self.logger.log(LoggingMessageTemplates.MODEL_ACCEPT(p1_wins / wins_total,
                                                                      update_threshold))
-                self.checkpointer.save_checkpoint(self.network, self.optimizer, self.memory, self.args["lr"], i)
+                self.checkpointer.save_checkpoint(self.network, self.optimizer, self.memory, self.args["lr"], i,
+                                                  self.args)
                 self.logger.log(LoggingMessageTemplates.SAVED("accepted model checkpoint",
                                                               self.checkpointer.get_checkpoint_dir()))
             else:
@@ -342,23 +343,6 @@ class Trainer:
         mem_params = sum([param.nelement() * param.element_size() for param in self.network.parameters()])
         mem_bufs = sum([buf.nelement() * buf.element_size() for buf in self.network.buffers()])
         return (mem_params + mem_bufs) / (1024 ** 2)
-
-
-def build_net_from_args(args, device) -> TicTacToeNet:
-    network = TicTacToeNet(args["num_net_in_channels"], args["num_net_channels"],
-                           args["net_dropout"], args["net_action_size"])
-    return network.to(device)
-
-
-def build_all_from_args(args, device, lr=None, buffer_size=None) -> tuple[TicTacToeNet, th.optim.Optimizer, MemBuffer]:
-    if lr is None:
-        lr = args["lr"]
-    if buffer_size is None:
-        buffer_size = args["max_buffer_size"]
-    network = build_net_from_args(args, device)
-    optimizer = th.optim.Adam(network.parameters(), lr=lr)
-    memory = MemBuffer(max_size=buffer_size)
-    return network, optimizer, memory
 
 
 def self_play(network: TicTacToeNet, num_games: int, tree: McSearchTree, device):

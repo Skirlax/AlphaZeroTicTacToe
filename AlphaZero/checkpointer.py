@@ -1,8 +1,7 @@
 import os
-
 import torch as th
 
-from AlphaZero.utils import find_project_root
+from AlphaZero.utils import find_project_root, DotDict
 from mem_buffer import MemBuffer
 
 
@@ -23,14 +22,15 @@ class CheckPointer:
         os.makedirs(checkpoint_dir, exist_ok=True)
 
     def save_checkpoint(self, net, optimizer: th.optim, memory: MemBuffer, lr: float,
-                        iteration: int) -> None:
+                        iteration: int, args: DotDict) -> None:
         checkpoint_path = f"{self.__checkpoint_dir}/{self.__name_prefix}{self.__checkpoint_num}.pth"
         th.save({
             "net": net.state_dict(),
             "optimizer": optimizer.state_dict(),
             "memory": memory,
             "lr": lr,
-            "iteration": iteration
+            "iteration": iteration,
+            "args": dict(args)
         }, checkpoint_path)
         self.print_verbose(f"Saved checkpoint to {checkpoint_path} at iteration {iteration}.")
         self.__checkpoint_num += 1

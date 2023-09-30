@@ -1,4 +1,5 @@
 import random
+import sys
 
 import numpy as np
 import pygame as pg
@@ -81,9 +82,11 @@ class GameManager:
             results.append(func(col.reshape(-1)))
 
         diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        flipped_diags = [np.diag(np.fliplr(arr), k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        diags.extend(flipped_diags)
         for diag in diags:
-            if diag.size < self.num_to_win:
-                continue
+            # if diag.size < self.num_to_win:
+            #     continue
             results.append(func(diag.reshape(-1)))
 
         return results
@@ -173,7 +176,7 @@ class GameManager:
     def get_board_size(self):
         return self.board_size
 
-    def pygame_render(self) -> bool:
+    def render(self) -> bool:
         if self.headless:
             return False
 
@@ -229,6 +232,28 @@ class GameManager:
             return False
         pg.quit()
         return True
+
+    def get_click_coords(self):
+        if self.headless:
+            return
+        mouse_pos = (x // 100 for x in pg.mouse.get_pos())
+        if pg.mouse.get_pressed()[0]:  # left click
+            return mouse_pos
+
+    def get_human_input(self, board: np.ndarray):
+        if self.headless:
+            return
+        while True:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    self.pygame_quit()
+                    sys.exit(0)
+            if self.get_click_coords() is not None:
+                x, y = self.get_click_coords()
+                if board[y][x] == 0:
+                    return y, x
+
+            # time.sleep(1 / 60)
 
     def game_result(self, player, board) -> float | None:
         """

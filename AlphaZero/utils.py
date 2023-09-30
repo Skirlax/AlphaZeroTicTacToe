@@ -4,7 +4,9 @@ import numpy as np
 import optuna
 import torch as th
 
+from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.constants import SAMPLE_ARGS as test_args
+from mem_buffer import MemBuffer
 
 
 class DotDict(dict):
@@ -168,3 +170,28 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
     study.optimize(objective, n_trials=n_trials)
 
 
+def build_net_from_args(args, device) -> TicTacToeNet:
+    network = TicTacToeNet(args["num_net_in_channels"], args["num_net_channels"],
+                           args["net_dropout"], args["net_action_size"])
+    return network.to(device)
+
+
+def build_all_from_args(args, device, lr=None, buffer_size=None) -> tuple[TicTacToeNet, th.optim.Optimizer, MemBuffer]:
+    if lr is None:
+        lr = args["lr"]
+    if buffer_size is None:
+        buffer_size = args["max_buffer_size"]
+    network = build_net_from_args(args, device)
+    optimizer = th.optim.Adam(network.parameters(), lr=lr)
+    memory = MemBuffer(max_size=buffer_size)
+    return network, optimizer, memory
+
+
+def make_net_from_checkpoint(checkpoint_path: str, args: DotDict | None):
+    if args is None:
+        args = DotDict(test_args)
+    device = th.device("cuda" if th.cuda.is_available() else "cpu")
+    net = build_net_from_args(args, device)
+    data = th.load(checkpoint_path)
+    net.load_state_dict(data["net"])
+    return net

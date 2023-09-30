@@ -1,6 +1,7 @@
 from AlphaZero.Arena.players import NetPlayer, Player
 from AlphaZero.utils import DotDict
 from Game.game import GameManager
+from typing import Type
 
 
 class Arena:
@@ -9,7 +10,7 @@ class Arena:
         self.device = device
         self.args = args
 
-    def pit(self, player1: NetPlayer, player2: Player, num_games_to_play: int, num_mc_simulations: int):
+    def pit(self, player1: Type[Player], player2: Type[Player], num_games_to_play: int, num_mc_simulations: int):
         """
         Pit two players against each other for a given number of games and gather the results.
         :param player1:
@@ -39,6 +40,7 @@ class Arena:
                     self.game_manager.play(current_player, move)
                 state = self.game_manager.get_board()
                 status = self.game_manager.game_result(current_player, state)
+                self.game_manager.render()
                 if status is not None:
                     if status == 1:
                         if current_player == 1:
