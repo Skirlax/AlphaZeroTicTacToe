@@ -24,7 +24,7 @@ SAMPLE_ARGS = {
         "update_threshold": 0.6,
         "max_depth": float("inf"),
         "show_tqdm": True,
-        "num_workers": 3,
+        "num_workers": 5,
         "num_to_win": 3,
         "log_epsilon": 1e-9,
     }

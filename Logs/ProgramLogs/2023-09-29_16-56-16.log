@@ -1,0 +1,98 @@
+[2023-09-29 16:56:16,685 - DEBUG] Starting training for 50 iterations.
+[2023-09-29 16:56:16,689 - DEBUG] Starting self play for 145 games.
+[2023-09-29 17:50:21,010 - DEBUG] Self play ended. Player 1 win frequency: 0.013793103448275862. Player 2 win frequency: 0.020689655172413793. Draws: 140.
+[2023-09-29 17:50:21,092 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 17:50:21,118 - DEBUG] Starting network training for 320 epochs.
+[2023-09-29 18:04:08,727 - DEBUG] Network training ended. Mean loss: 2.19366225335747
+[2023-09-29 18:04:08,727 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 18:04:08,728 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-29 18:22:34,900 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.65. Player 2 win frequency: 0.35. Draws: 0.
+[2023-09-29 18:22:34,901 - DEBUG] Starting pitting between NetworkPlayer and RandomPlayer for 40 games.
+[2023-09-29 18:27:00,428 - DEBUG] Pitting ended between NetworkPlayer and RandomPlayer. Player 1 win frequency: 0.975. Player 2 win frequency: 0.025. Draws: 0.
+[2023-09-29 18:27:00,428 - DEBUG] !!! Model accepted, keeping current version. Win rate: 0.65. Update threshold: 0.6 !!!
+[2023-09-29 18:27:01,383 - DEBUG] Saved accepted model checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions
+[2023-09-29 18:27:01,383 - DEBUG] Starting self play for 145 games.
+[2023-09-29 19:22:01,543 - DEBUG] Self play ended. Player 1 win frequency: 0.0. Player 2 win frequency: 0.0. Draws: 145.
+[2023-09-29 19:22:01,658 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 19:22:01,722 - DEBUG] Starting network training for 320 epochs.
+[2023-09-29 19:50:09,879 - DEBUG] Network training ended. Mean loss: 2.17031579793345
+[2023-09-29 19:50:09,879 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 19:50:09,879 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-29 20:07:48,347 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.625. Player 2 win frequency: 0.375. Draws: 0.
+[2023-09-29 20:07:48,347 - DEBUG] !!! Model accepted, keeping current version. Win rate: 0.625. Update threshold: 0.6 !!!
+[2023-09-29 20:07:50,156 - DEBUG] Saved accepted model checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions
+[2023-09-29 20:07:50,156 - DEBUG] Starting self play for 145 games.
+[2023-09-29 21:02:46,223 - DEBUG] Self play ended. Player 1 win frequency: 0.006896551724137931. Player 2 win frequency: 0.0. Draws: 144.
+[2023-09-29 21:02:46,317 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 21:02:46,467 - DEBUG] Starting network training for 320 epochs.
+[2023-09-29 21:45:33,204 - DEBUG] Network training ended. Mean loss: 2.170146778775445
+[2023-09-29 21:45:33,204 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 21:45:33,205 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-29 22:06:04,774 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.45. Player 2 win frequency: 0.55. Draws: 0.
+[2023-09-29 22:06:04,774 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.45. Update threshold: 0.6 !!!
+[2023-09-29 22:06:04,796 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 22:06:04,796 - DEBUG] Starting self play for 145 games.
+[2023-09-29 23:00:51,135 - DEBUG] Self play ended. Player 1 win frequency: 0.0. Player 2 win frequency: 0.006896551724137931. Draws: 144.
+[2023-09-29 23:00:51,232 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 23:00:51,526 - DEBUG] Starting network training for 320 epochs.
+[2023-09-29 23:58:27,372 - DEBUG] Network training ended. Mean loss: 2.1728890867177264
+[2023-09-29 23:58:27,372 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-29 23:58:27,372 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 00:17:02,317 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.575. Player 2 win frequency: 0.425. Draws: 0.
+[2023-09-30 00:17:02,317 - DEBUG] Starting pitting between NetworkPlayer and RandomPlayer for 40 games.
+[2023-09-30 00:21:11,646 - DEBUG] Pitting ended between NetworkPlayer and RandomPlayer. Player 1 win frequency: 1.0. Player 2 win frequency: 0.0. Draws: 0.
+[2023-09-30 00:21:11,646 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.575. Update threshold: 0.6 !!!
+[2023-09-30 00:21:11,672 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 00:21:11,673 - DEBUG] Starting self play for 145 games.
+[2023-09-30 01:16:09,929 - DEBUG] Self play ended. Player 1 win frequency: 0.0. Player 2 win frequency: 0.0. Draws: 145.
+[2023-09-30 01:16:10,032 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 01:16:10,534 - DEBUG] Starting network training for 320 epochs.
+[2023-09-30 02:29:23,733 - DEBUG] Network training ended. Mean loss: 2.1743104143284535
+[2023-09-30 02:29:23,734 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 02:29:23,734 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 02:49:20,381 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.575. Player 2 win frequency: 0.425. Draws: 0.
+[2023-09-30 02:49:20,381 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.575. Update threshold: 0.6 !!!
+[2023-09-30 02:49:20,406 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 02:49:20,406 - DEBUG] Starting self play for 145 games.
+[2023-09-30 03:44:14,588 - DEBUG] Self play ended. Player 1 win frequency: 0.0. Player 2 win frequency: 0.0. Draws: 145.
+[2023-09-30 03:44:14,683 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 03:44:15,308 - DEBUG] Starting network training for 320 epochs.
+[2023-09-30 05:06:17,028 - DEBUG] Network training ended. Mean loss: 2.177916797007079
+[2023-09-30 05:06:17,028 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 05:06:17,029 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 05:26:45,521 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.45. Player 2 win frequency: 0.55. Draws: 0.
+[2023-09-30 05:26:45,521 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.45. Update threshold: 0.6 !!!
+[2023-09-30 05:26:45,543 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 05:26:45,543 - DEBUG] Starting self play for 145 games.
+[2023-09-30 06:21:14,606 - DEBUG] Self play ended. Player 1 win frequency: 0.013793103448275862. Player 2 win frequency: 0.0. Draws: 143.
+[2023-09-30 06:21:14,695 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 06:21:15,372 - DEBUG] Starting network training for 320 epochs.
+[2023-09-30 07:43:03,080 - DEBUG] Network training ended. Mean loss: 2.1812422992718763
+[2023-09-30 07:43:03,081 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 07:43:03,081 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 08:01:14,161 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.5. Player 2 win frequency: 0.5. Draws: 0.
+[2023-09-30 08:01:14,161 - DEBUG] Starting pitting between NetworkPlayer and RandomPlayer for 40 games.
+[2023-09-30 08:05:17,979 - DEBUG] Pitting ended between NetworkPlayer and RandomPlayer. Player 1 win frequency: 1.0. Player 2 win frequency: 0.0. Draws: 0.
+[2023-09-30 08:05:17,980 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.5. Update threshold: 0.6 !!!
+[2023-09-30 08:05:18,008 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 08:05:18,008 - DEBUG] Starting self play for 145 games.
+[2023-09-30 09:00:15,947 - DEBUG] Self play ended. Player 1 win frequency: 0.0. Player 2 win frequency: 0.006896551724137931. Draws: 144.
+[2023-09-30 09:00:16,027 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 09:00:16,730 - DEBUG] Starting network training for 320 epochs.
+[2023-09-30 10:22:12,722 - DEBUG] Network training ended. Mean loss: 2.1824277278135917
+[2023-09-30 10:22:12,723 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 10:22:12,723 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 10:42:30,845 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.525. Player 2 win frequency: 0.475. Draws: 0.
+[2023-09-30 10:42:30,846 - DEBUG] !!! Model rejected, restoring previous version. Win rate: 0.525. Update threshold: 0.6 !!!
+[2023-09-30 10:42:30,868 - DEBUG] Restored previous version checkpoint from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 10:42:30,869 - DEBUG] Starting self play for 145 games.
+[2023-09-30 11:37:04,295 - DEBUG] Self play ended. Player 1 win frequency: 0.006896551724137931. Player 2 win frequency: 0.020689655172413793. Draws: 141.
+[2023-09-30 11:37:04,380 - DEBUG] Saved temp checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 11:37:05,111 - DEBUG] Starting network training for 320 epochs.
+[2023-09-30 12:58:35,276 - DEBUG] Network training ended. Mean loss: 2.1811765327377963
+[2023-09-30 12:58:35,276 - DEBUG] Restored opponent network from /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions/Temp/temp_net.pth
+[2023-09-30 12:58:35,276 - DEBUG] Starting pitting between NetworkPlayer and NetworkPlayer for 40 games.
+[2023-09-30 13:17:04,984 - DEBUG] Pitting ended between NetworkPlayer and NetworkPlayer. Player 1 win frequency: 0.65. Player 2 win frequency: 0.35. Draws: 0.
+[2023-09-30 13:17:04,984 - DEBUG] !!! Model accepted, keeping current version. Win rate: 0.65. Update threshold: 0.6 !!!
+[2023-09-30 13:17:09,956 - DEBUG] Saved accepted model checkpoint to /workspace/AlphaZeroTicTacToe/Checkpoints/NetVersions
+[2023-09-30 13:17:09,957 - DEBUG] Starting self play for 145 games.

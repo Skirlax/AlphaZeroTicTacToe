@@ -1,0 +1,17 @@
+
+
+!!! Backup version of sequential self-play lopp. !!!
+
+# for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
+                #     game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
+                #     # print(f"Game {j + 1} finished.")
+                #     self.mcts.step_root(None)  # reset the search tree
+                #     self.memory.add_list(game_history)
+                #     wins_p1 += wins_one
+                #     wins_p2 += wins_minus_one
+                #     game_draws += draws
+
+
+!!! Create optuna study command. !!!
+
+optuna create-study --study-name alpha_zero --direction maximize --storage "mysql://root:584792@localhost/alpha_zero"

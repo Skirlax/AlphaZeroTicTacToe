@@ -32,16 +32,16 @@ def main_alpha_zero():
 
     # !!! Use found args !!!
 
-    # args.num_simulations = 61
     args.num_simulations = 1317
-    args.self_play_games = 142
+    args.self_play_games = 145
     args.epochs = 320
     args.lr = 0.00032485504583772953
     args.tau = 0.8243290871234756
     args.c = 1.7409658274805089
     args.arena_tau = 0.04139160592420218
-    args.num_iters = 15
     args.log_epsilon = 1.4165210108199043e-08
+
+    args.num_iters = 50
 
     trainer = Trainer.create(args)
     trainer.train()
