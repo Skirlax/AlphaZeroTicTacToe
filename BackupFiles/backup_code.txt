@@ -15,3 +15,11 @@
 !!! Create optuna study command. !!!
 
 optuna create-study --study-name alpha_zero --direction maximize --storage "mysql://root:584792@localhost/alpha_zero"
+
+!!! Old pi_loss function. !!!
+
+def pi_loss(self, y_hat, y, masks):
+    y_hat_log = th.log(y_hat + self.args.log_epsilon)
+    masks = masks.reshape(y_hat_log.shape).to(self.device)
+    y_hat_log = masks * y_hat_log
+    return -th.sum(y * y_hat_log) / y.size()[0]

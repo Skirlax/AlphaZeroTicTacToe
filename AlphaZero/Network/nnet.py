@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch as th
 
 
 class TicTacToeNet(nn.Module):
@@ -17,7 +18,7 @@ class TicTacToeNet(nn.Module):
         self.bn4 = nn.BatchNorm2d(num_channels)
 
         # Fully connected layers
-        # 4608 (5x5) or 512 (3x3)
+        # 4608 (5x5) or 512 (3x3) or 32768 (10x10)
         self.fc1 = nn.Linear(4608, 1024)
         self.fc1_bn = nn.BatchNorm1d(1024)
         self.fc2 = nn.Linear(1024, 512)
@@ -44,13 +45,14 @@ class TicTacToeNet(nn.Module):
         x = F.relu(self.fc2_bn(self.fc2(x)))
         x = self.dropout(x)
 
-        pi = F.softmax(self.pi(x), dim=1)
+        pi = F.log_softmax(self.pi(x), dim=1)
         v = F.tanh(self.v(x))
 
         return pi, v
 
     def predict(self, x):
         pi, v = self.forward(x)
+        pi = th.exp(pi)
         return pi.detach().cpu().numpy(), v.detach().cpu().numpy()
 
 

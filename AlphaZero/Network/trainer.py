@@ -101,10 +101,9 @@ class Trainer:
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
     def pi_loss(self, y_hat, y, masks):
-        y_hat_log = th.log(y_hat + self.args.log_epsilon)
-        masks = masks.reshape(y_hat_log.shape).to(self.device)
-        y_hat_log = masks * y_hat_log
-        return -th.sum(y * y_hat_log) / y.size()[0]
+        masks = masks.reshape(y_hat.shape).to(self.device)
+        masked_y_hat = masks * y_hat
+        return -th.sum(y * masked_y_hat) / y.size()[0]
 
     def train(self) -> TicTacToeNet:
         self.logger.log(LoggingMessageTemplates.TRAINING_START(self.args["num_iters"]))
@@ -120,16 +119,16 @@ class Trainer:
         for i in self.make_tqdm_bar(range(num_iters), "Training Progress", 0):
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
-                wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
-                # wins_p1, wins_p2, game_draws = 0, 0, 0
-                # for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
-                #     game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
-                #     # print(f"Game {j + 1} finished.")
-                #     self.mcts.step_root(None)  # reset the search tree
-                #     self.memory.add_list(game_history)
-                #     wins_p1 += wins_one
-                #     wins_p2 += wins_minus_one
-                #     game_draws += draws
+                # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
+                wins_p1, wins_p2, game_draws = 0, 0, 0
+                for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
+                    game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
+                    # print(f"Game {j + 1} finished.")
+                    self.mcts.step_root(None)  # reset the search tree
+                    self.memory.add_list(game_history)
+                    wins_p1 += wins_one
+                    wins_p2 += wins_minus_one
+                    game_draws += draws
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
 
             self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
@@ -151,8 +150,8 @@ class Trainer:
             self.logger.log(LoggingMessageTemplates.LOADED("opponent network", self.checkpointer.get_temp_path()))
             self.network.eval()
             self.opponent_network.eval()
-            p1_game_manager = GameManager(self.args["board_size"], self.headless)
-            p2_game_manager = GameManager(self.args["board_size"], self.headless)
+            p1_game_manager = GameManager(self.args["board_size"], self.headless,num_to_win=self.args.num_to_win)
+            p2_game_manager = GameManager(self.args["board_size"], self.headless,num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_game_manager, self.args)
             p2_tree = McSearchTree(p2_game_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_game_manager)
@@ -219,9 +218,9 @@ class Trainer:
 
     def only_pit(self, p1: Player, p2: Player, num_games: int):
         if p1 == NetPlayer and p2 == NetPlayer:
-            p1_manager = GameManager(self.args["board_size"], self.headless)
+            p1_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_manager, self.args)
-            p2_manager = GameManager(self.args["board_size"], self.headless)
+            p2_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p2_tree = McSearchTree(p2_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_manager)
             p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
@@ -274,7 +273,7 @@ class Trainer:
         """
         trees = []
         for i in range(n):
-            manager = GameManager(self.args["board_size"], self.headless)
+            manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             trees.append(McSearchTree(manager, dict(self.args)))
         return trees
 

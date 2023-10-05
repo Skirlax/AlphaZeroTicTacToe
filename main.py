@@ -4,7 +4,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 from AlphaZero.Network.trainer import Trainer
 from AlphaZero.constants import SAMPLE_ARGS as args_
 from AlphaZero.constants import TRAINED_NET_ARGS as _args
-from AlphaZero.utils import optuna_parameter_search, DotDict,make_net_from_checkpoint
+from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
 from AlphaZero.Network.nnet import TicTacToeNet
 import argparse
 from AlphaZero.Arena.players import NetPlayer, HumanPlayer
@@ -45,7 +45,8 @@ def main_alpha_zero():
     args.lr = 0.00032485504583772953
     args.tau = 0.8243290871234756
     args.c = 1.7409658274805089
-    args.arena_tau = 0.04139160592420218
+    args.arena_tau = 0  # 0.04139160592420218
+    # args.arena_tau = args.tau
     args.log_epsilon = 1.4165210108199043e-08
 
     args.num_iters = 50
@@ -57,7 +58,7 @@ def main_alpha_zero():
 
 def play():
     args = DotDict(_args)
-    net = make_net_from_checkpoint("Nets/improved_net_3.pth", args)
+    net = make_net_from_checkpoint("Nets/improved_net_1.pth", args)
     net.eval()
     manager = GameManager(5, headless=False, num_to_win=3)
     search_tree = McSearchTree(manager, args)

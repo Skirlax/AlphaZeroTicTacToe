@@ -40,7 +40,7 @@ class NetPlayer(Player):
             raise KeyError("Missing keyword argument. Please supply kwargs: current_player, device, "
                            "tau")
 
-        pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device)
+        pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device,tau=tau)
         move = self.game_manager.select_move(pi)
         self.monte_carlo_tree_search.step_root(None)
         return self.game_manager.network_to_board(move)

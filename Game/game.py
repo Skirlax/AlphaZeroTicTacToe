@@ -320,3 +320,11 @@ class GameManager:
 
     def __str__(self):
         return str(self.board).replace('1', 'X').replace('-1', 'O')
+
+
+# if __name__ == "__main__":
+#     sample_arr = np.array([[-1,1,-1,1,1],[-1,1,1,-1,-1],[1,-1,1,1,1],[-1,1,1,-1,1],[0,0,-1,1,1]])
+#     game_manager = GameManager(5, True,num_to_win=3)
+#     res = game_manager.game_result(-1,sample_arr)
+#     print(res)
+

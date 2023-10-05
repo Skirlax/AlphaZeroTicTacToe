@@ -1,3 +1,5 @@
+import time
+
 from AlphaZero.Arena.players import NetPlayer, Player
 from AlphaZero.utils import DotDict
 from Game.game import GameManager
@@ -21,10 +23,14 @@ class Arena:
         """
         results = {"wins_p1": 0, "wins_p2": 0, "draws": 0}
         tau = self.args.arena_tau
+        num_games_per_player = num_games_to_play // 2
 
         for game in range(num_games_to_play):
-            current_player = 1
-            kwargs = {"num_simulations": num_mc_simulations, "current_player": 1, "device": self.device,
+            if game < num_games_per_player:
+                current_player = 1
+            else:
+                current_player = -1
+            kwargs = {"num_simulations": num_mc_simulations, "current_player": current_player, "device": self.device,
                       "tau": tau}
             state = self.game_manager.reset()
             player1.monte_carlo_tree_search.step_root(None)
@@ -32,6 +38,7 @@ class Arena:
                 player2.monte_carlo_tree_search.step_root(None)
 
             while True:
+                self.game_manager.render()
                 if current_player == 1:
                     move = player1.choose_move(state, **kwargs)
                     self.game_manager.play(current_player, move)
@@ -56,6 +63,7 @@ class Arena:
                     else:
                         results["draws"] += 1
 
+                    # time.sleep(2)
                     break
 
                 current_player *= -1

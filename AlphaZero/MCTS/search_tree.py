@@ -1,8 +1,9 @@
 import torch as th
 
 from AlphaZero.MCTS.node import Node
-from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions,DotDict
+from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions, DotDict
 from Game.game import GameManager
+import datetime
 
 
 class McSearchTree:
@@ -12,7 +13,7 @@ class McSearchTree:
         self.root_node = None
 
     def play_one_game(self, network, device) -> tuple[list, int, int, int]:
-        tau = self.args["tau"]
+        # tau = self.args["tau"]
         state = self.game_manager.reset()
         current_player = 1
         game_history = []
@@ -46,9 +47,10 @@ class McSearchTree:
         game_history = augment_experience_with_symmetries(game_history, self.game_manager.board_size)
         return game_history, results["1"], results["-1"], results["D"]
 
-    def search(self, network, state, current_player, device):
+    def search(self, network, state, current_player, device, tau=None):
         """
         Perform a Monte Carlo Tree Search on the current state starting with the current player.
+        :param tau:
         :param network:
         :param state:
         :param current_player:
@@ -56,6 +58,8 @@ class McSearchTree:
         :return:
         """
         num_simulations = self.args["num_simulations"]
+        if tau is None:
+            tau = self.args["tau"]
         if self.root_node is None:
             self.root_node = Node(current_player, times_visited_init=0)
         state_ = self.game_manager.get_canonical_form(state, current_player)
@@ -84,6 +88,16 @@ class McSearchTree:
                                                           current_node.parent.current_player)
             next_state_ = self.game_manager.get_canonical_form(next_state, current_node.current_player)
             v = self.game_manager.game_result(current_node.current_player, next_state)
+            if v is None and (
+                    self.game_manager.check_partial_win(1, 3, board=next_state) or self.game_manager.check_partial_win(
+                    -1, 3, board=next_state)):
+                print(f"Partial win found, but not detected by game_result."
+                      f"At [{datetime.datetime.now()}]. Adding possibly important info:\n"
+                      f"Current node player: {current_node.current_player}\n"
+                      f"Next state: {next_state}\n",
+
+                      file=open("win_info.txt", "a+"))
+                raise ValueError("Partial win found, but not detected by game_result.")
             # None
             if v is None:
                 # next_state_ = make_channels_from_single(next_state_)
@@ -96,7 +110,7 @@ class McSearchTree:
 
             self.backprop(v, path)
 
-        return self.root_node.get_self_action_probabilities(tau=self.args["tau"]), self.root_node.get_self_value()
+        return self.root_node.get_self_action_probabilities(tau=tau), self.root_node.get_self_value()
 
     def backprop(self, v, path):
         for node in reversed(path):
