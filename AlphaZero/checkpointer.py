@@ -1,4 +1,5 @@
 import os
+
 import torch as th
 
 from AlphaZero.utils import find_project_root, DotDict
@@ -22,8 +23,11 @@ class CheckPointer:
         os.makedirs(checkpoint_dir, exist_ok=True)
 
     def save_checkpoint(self, net, optimizer: th.optim, memory: MemBuffer, lr: float,
-                        iteration: int, args: DotDict) -> None:
-        checkpoint_path = f"{self.__checkpoint_dir}/{self.__name_prefix}{self.__checkpoint_num}.pth"
+                        iteration: int, args: DotDict, name: str = None) -> None:
+        if name is None:
+            name = self.__name_prefix + str(self.__checkpoint_num)
+
+        checkpoint_path = f"{self.__checkpoint_dir}/{name}.pth"
         th.save({
             "net": net.state_dict(),
             "optimizer": optimizer.state_dict(),
@@ -88,6 +92,14 @@ class CheckPointer:
 
     def get_checkpoint_dir(self) -> str:
         return self.__checkpoint_dir
+
+    def get_latest_name_match(self, name: str):
+        name_matches = [os.path.join(self.__checkpoint_dir, x) for x in os.listdir(self.__checkpoint_dir) if name in x]
+        name_matches.sort(key=lambda x: os.path.getctime(x))
+        return name_matches[-1]
+
+    def get_name_prefix(self):
+        return self.__name_prefix
 
     def print_verbose(self, msg: str) -> None:
         if self.verbose:

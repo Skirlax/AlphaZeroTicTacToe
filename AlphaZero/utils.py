@@ -3,6 +3,7 @@ import os
 import numpy as np
 import optuna
 import torch as th
+from IPython import get_ipython
 
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.constants import SAMPLE_ARGS as test_args
@@ -67,7 +68,7 @@ def mask_invalid_actions(probabilities: np.ndarray, observations: np.ndarray, bo
     mask = np.where(observations != 0, -5, observations)
     mask = np.where(mask == 0, 1, mask)
     mask = np.where(mask == -5, 0, mask)
-    valids = probabilities.reshape(-1,board_size ** 2) * mask.reshape(-1, board_size ** 2)
+    valids = probabilities.reshape(-1, board_size ** 2) * mask.reshape(-1, board_size ** 2)
     valids_sum = valids.sum()
     if valids_sum == 0:
         # When no valid moves are available (shouldn't happen) sum of valids is 0, making the returned valids an array
@@ -195,3 +196,32 @@ def make_net_from_checkpoint(checkpoint_path: str, args: DotDict | None):
     data = th.load(checkpoint_path)
     net.load_state_dict(data["net"])
     return net
+
+
+def is_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True  # Jupyter Notebook
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type, assume not a notebook
+    except NameError:
+        return False
+
+
+def upload_checkpoint_to_gdrive(files: list,not_notebook_ok: bool = False):
+    is_nbt = is_notebook()
+    if not is_nbt and not_notebook_ok:
+        return
+    if not is_nbt:
+        raise RuntimeError("This method should only be called from a notebook.")
+    
+    from google.colab import drive
+    drive.mount('/content/drive')
+    for file in files:
+        !mkdir -p /content/drive/MyDrive/Checkpoints
+        !cp $file /content/drive/MyDrive/Checkpoints
+
+

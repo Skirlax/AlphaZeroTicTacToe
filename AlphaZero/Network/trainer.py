@@ -13,7 +13,8 @@ from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
-from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args
+from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args, \
+    upload_checkpoint_to_gdrive
 from Game.game import GameManager
 from mem_buffer import MemBuffer
 
@@ -144,14 +145,19 @@ class Trainer:
             self.memory.shuffle()
             self.logger.log(LoggingMessageTemplates.NETWORK_TRAINING_START(epochs))
             mean_loss = self.train_network(epochs, i, batch_size)
+            self.checkpointer.save_checkpoint(self.network, self.optimizer, self.memory,
+                                              self.args["lr"], i, self.args, name="latest_trained_net")
+            upload_checkpoint_to_gdrive([self.checkpointer.get_latest_name_match("latest_trained_net"),
+                                         self.checkpointer.get_latest_name_match(self.checkpointer.get_name_prefix())],
+                                        not_notebook_ok=True)
 
             self.logger.log(LoggingMessageTemplates.NETWORK_TRAINING_END(mean_loss))
 
             self.logger.log(LoggingMessageTemplates.LOADED("opponent network", self.checkpointer.get_temp_path()))
             self.network.eval()
             self.opponent_network.eval()
-            p1_game_manager = GameManager(self.args["board_size"], self.headless,num_to_win=self.args.num_to_win)
-            p2_game_manager = GameManager(self.args["board_size"], self.headless,num_to_win=self.args.num_to_win)
+            p1_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p2_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_game_manager, self.args)
             p2_tree = McSearchTree(p2_game_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_game_manager)
