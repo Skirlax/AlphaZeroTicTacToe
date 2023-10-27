@@ -89,8 +89,8 @@ class McSearchTree:
             next_state_ = self.game_manager.get_canonical_form(next_state, current_node.current_player)
             v = self.game_manager.game_result(current_node.current_player, next_state)
             if v is None and (
-                    self.game_manager.check_partial_win(1, 3, board=next_state) or self.game_manager.check_partial_win(
-                    -1, 3, board=next_state)):
+                    self.game_manager.check_partial_win(1, self.args["num_to_win"], board=next_state) or self.game_manager.check_partial_win(
+                    -1, self.args["num_to_win"], board=next_state)):
                 print(f"Partial win found, but not detected by game_result."
                       f"At [{datetime.datetime.now()}]. Adding possibly important info:\n"
                       f"Current node player: {current_node.current_player}\n"

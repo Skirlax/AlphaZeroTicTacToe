@@ -43,11 +43,12 @@ def main_alpha_zero():
     args.self_play_games = 145
     args.epochs = 320
     args.lr = 0.00032485504583772953
-    args.tau = 0.8243290871234756
+    # args.tau = 0.8243290871234756
+    args.tau = 1.0
     args.c = 1.7409658274805089
     args.arena_tau = 0  # 0.04139160592420218
     # args.arena_tau = args.tau
-    args.log_epsilon = 1.4165210108199043e-08
+    # args.log_epsilon = 1.4165210108199043e-08
 
     args.num_iters = 50
 
@@ -58,7 +59,7 @@ def main_alpha_zero():
 
 def play():
     args = DotDict(_args)
-    net = make_net_from_checkpoint("Nets/improved_net_1.pth", args)
+    net = make_net_from_checkpoint("Nets/FinalNets/5x5_3/latest_trained_net.pth", args)
     net.eval()
     manager = GameManager(5, headless=False, num_to_win=3)
     search_tree = McSearchTree(manager, args)
@@ -66,7 +67,7 @@ def play():
     p2 = HumanPlayer(manager)
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager, args, device)
-    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317)
+    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317,one_player=True,start_player=1)
     print(f"Net wins: {net_wins}, Human wins: {human_wins}, Draws: {draws}")
 
 

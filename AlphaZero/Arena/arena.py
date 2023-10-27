@@ -1,9 +1,9 @@
-import time
+from typing import Type
 
-from AlphaZero.Arena.players import NetPlayer, Player
+from AlphaZero.Arena.players import Player
 from AlphaZero.utils import DotDict
 from Game.game import GameManager
-from typing import Type
+import time
 
 
 class Arena:
@@ -12,9 +12,13 @@ class Arena:
         self.device = device
         self.args = args
 
-    def pit(self, player1: Type[Player], player2: Type[Player], num_games_to_play: int, num_mc_simulations: int):
+    def pit(self, player1: Type[Player], player2: Type[Player],
+            num_games_to_play: int, num_mc_simulations: int, one_player: bool = False,
+            start_player: int = 1) -> tuple[int, int, int]:
         """
         Pit two players against each other for a given number of games and gather the results.
+        :param start_player: Which player should start the game.
+        :param one_player: If True always only the first player will start the game.
         :param player1:
         :param player2:
         :param num_games_to_play:
@@ -23,13 +27,16 @@ class Arena:
         """
         results = {"wins_p1": 0, "wins_p2": 0, "draws": 0}
         tau = self.args.arena_tau
-        num_games_per_player = num_games_to_play // 2
+        if one_player:
+            num_games_per_player = num_games_to_play
+        else:
+            num_games_per_player = num_games_to_play // 2
 
         for game in range(num_games_to_play):
             if game < num_games_per_player:
-                current_player = 1
+                current_player = start_player
             else:
-                current_player = -1
+                current_player = -start_player
             kwargs = {"num_simulations": num_mc_simulations, "current_player": current_player, "device": self.device,
                       "tau": tau}
             state = self.game_manager.reset()
@@ -63,7 +70,7 @@ class Arena:
                     else:
                         results["draws"] += 1
 
-                    # time.sleep(2)
+                    time.sleep(2)
                     break
 
                 current_player *= -1
