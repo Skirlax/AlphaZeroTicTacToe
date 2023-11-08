@@ -40,20 +40,21 @@ class NetPlayer(Player):
             raise KeyError("Missing keyword argument. Please supply kwargs: current_player, device, "
                            "tau")
 
-        pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device,tau=tau)
+        pi, _ = self.monte_carlo_tree_search.search(
+            self.network, board, current_player, device, tau=tau)
         move = self.game_manager.select_move(pi)
         self.monte_carlo_tree_search.step_root(None)
         return self.game_manager.network_to_board(move)
 
 
 class HumanPlayer(Player):
-    def __init__(self,game_manager: GameManager):
+    def __init__(self, game_manager: GameManager):
         self.name = "HumanPlayer"
         self.game_manager = game_manager
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         if self.game_manager.headless:
-            raise RuntimeError("Cannot play with a human player in headless mode.")
+            raise RuntimeError(
+                "Cannot play with a human player in headless mode.")
         move = self.game_manager.get_human_input(board)
         return move
-

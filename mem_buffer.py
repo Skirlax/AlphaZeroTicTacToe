@@ -39,7 +39,8 @@ class MemBuffer:
         batched_buffer = []
         buffer_len = len(self.buffer)
         for idx in range(0, buffer_len, batch_size):
-            batched_buffer.append(list(self.buffer)[idx:min(idx + batch_size, buffer_len)])
+            batched_buffer.append(
+                list(self.buffer)[idx:min(idx + batch_size, buffer_len)])
 
         return batched_buffer
 

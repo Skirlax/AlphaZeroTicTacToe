@@ -23,9 +23,11 @@ class McSearchTree:
             move = self.game_manager.select_move(pi)
             # self.step_root([move])
             self.step_root(None)
-            self.game_manager.play(current_player, self.game_manager.network_to_board(move))
+            self.game_manager.play(
+                current_player, self.game_manager.network_to_board(move))
             # pi = [x for x in pi.values()]
-            game_history.append((state * current_player, pi, None, current_player))
+            game_history.append(
+                (state * current_player, pi, None, current_player))
             state = self.game_manager.get_board()
             r = self.game_manager.game_result(current_player, state)
             if r is not None:
@@ -37,14 +39,17 @@ class McSearchTree:
                     results["-1"] += 1
 
                 if -1 < r < 1:
-                    game_history = [(x[0], x[1], r, x[3]) for x in game_history]
+                    game_history = [(x[0], x[1], r, x[3])
+                                    for x in game_history]
                 else:
-                    game_history = [(x[0], x[1], r * current_player * x[3], x[3]) for x in game_history]
+                    game_history = [
+                        (x[0], x[1], r * current_player * x[3], x[3]) for x in game_history]
                 break
             current_player *= -1
 
         # game_history = make_channels(game_history)
-        game_history = augment_experience_with_symmetries(game_history, self.game_manager.board_size)
+        game_history = augment_experience_with_symmetries(
+            game_history, self.game_manager.board_size)
         return game_history, results["1"], results["-1"], results["D"]
 
     def search(self, network, state, current_player, device, tau=None):
@@ -64,10 +69,12 @@ class McSearchTree:
             self.root_node = Node(current_player, times_visited_init=0)
         state_ = self.game_manager.get_canonical_form(state, current_player)
         # state_ = make_channels_from_single(state_)
-        state_ = th.tensor(state_, dtype=th.float32, device=device).unsqueeze(0)
+        state_ = th.tensor(state_, dtype=th.float32,
+                           device=device).unsqueeze(0)
         probabilities, v = network.predict(state_)
 
-        probabilities = mask_invalid_actions(probabilities, state, self.game_manager.board_size)
+        probabilities = mask_invalid_actions(
+            probabilities, state, self.game_manager.board_size)
         probabilities = probabilities.flatten().tolist()
         self.root_node.expand(state, probabilities)
         for simulation in range(num_simulations):
@@ -75,19 +82,24 @@ class McSearchTree:
             path = [current_node]
             action = None
             while current_node.was_visited():
-                current_node, action = current_node.get_best_child(c=self.args["c"])
+                current_node, action = current_node.get_best_child(
+                    c=self.args["c"])
                 if current_node is None:  # This was for testing purposes
                     th.save(self.root_node, "root_node.pt")
-                    th.save(network.state_dict(), f"network_none_checkpoint_{current_player}.pt")
+                    th.save(network.state_dict(),
+                            f"network_none_checkpoint_{current_player}.pt")
                     raise ValueError("current_node is None")
                 path.append(current_node)
 
             # leaf node reached
             next_state = self.game_manager.get_next_state(current_node.parent.state,
-                                                          self.game_manager.network_to_board(action),
+                                                          self.game_manager.network_to_board(
+                                                              action),
                                                           current_node.parent.current_player)
-            next_state_ = self.game_manager.get_canonical_form(next_state, current_node.current_player)
-            v = self.game_manager.game_result(current_node.current_player, next_state)
+            next_state_ = self.game_manager.get_canonical_form(
+                next_state, current_node.current_player)
+            v = self.game_manager.game_result(
+                current_node.current_player, next_state)
             if v is None and (
                     self.game_manager.check_partial_win(1, self.args["num_to_win"], board=next_state) or self.game_manager.check_partial_win(
                     -1, self.args["num_to_win"], board=next_state)):
@@ -97,13 +109,16 @@ class McSearchTree:
                       f"Next state: {next_state}\n",
 
                       file=open("win_info.txt", "a+"))
-                raise ValueError("Partial win found, but not detected by game_result.")
+                raise ValueError(
+                    "Partial win found, but not detected by game_result.")
             # None
             if v is None:
                 # next_state_ = make_channels_from_single(next_state_)
-                next_state_ = th.tensor(next_state_, dtype=th.float32, device=device).unsqueeze(0)
+                next_state_ = th.tensor(
+                    next_state_, dtype=th.float32, device=device).unsqueeze(0)
                 probabilities, v = network.predict(next_state_)
-                probabilities = mask_invalid_actions(probabilities, next_state, self.game_manager.board_size)
+                probabilities = mask_invalid_actions(
+                    probabilities, next_state, self.game_manager.board_size)
                 v = v.flatten().tolist()[0]
                 probabilities = probabilities.flatten().tolist()
                 current_node.expand(next_state, probabilities)

@@ -81,8 +81,10 @@ class GameManager:
         for col in arr.T:
             results.append(func(col.reshape(-1)))
 
-        diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
-        flipped_diags = [np.diag(np.fliplr(arr), k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        diags = [np.diag(arr, k=i)
+                 for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        flipped_diags = [np.diag(np.fliplr(arr), k=i)
+                         for i in range(-arr.shape[0] + 1, arr.shape[1])]
         diags.extend(flipped_diags)
         for diag in diags:
             # if diag.size < self.num_to_win:
@@ -106,7 +108,8 @@ class GameManager:
         """
         if board is None:
             board = self.get_board()
-        matches = self.full_iterate_array(board, lambda part: np.all(part == player))
+        matches = self.full_iterate_array(
+            board, lambda part: np.all(part == player))
         for match in matches:
             if not isinstance(match, str) and match:
                 return True
@@ -208,7 +211,8 @@ class GameManager:
     def _draw_board(self):
         for x in range(0, self.board_size * 100, 100):
             for y in range(0, self.board_size * 100, 100):
-                pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(x, y, 100, 100), 1)
+                pg.draw.rect(self.screen, (255, 255, 255),
+                             pg.Rect(x, y, 100, 100), 1)
 
     def is_empty(self, index: tuple) -> bool:
         return self.board[index] == 0
@@ -310,7 +314,8 @@ class GameManager:
             moves, probabilities = zip(*action_probs.items())
             adjusted_probs = [prob ** (1 / tau) for prob in probabilities]
             adjusted_probs_sum = sum(adjusted_probs)
-            normalized_probs = [prob / adjusted_probs_sum for prob in adjusted_probs]
+            normalized_probs = [
+                prob / adjusted_probs_sum for prob in adjusted_probs]
             return dict(zip(moves, normalized_probs))
 
     @staticmethod

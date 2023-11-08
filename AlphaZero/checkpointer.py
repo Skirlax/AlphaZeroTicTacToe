@@ -36,7 +36,8 @@ class CheckPointer:
             "iteration": iteration,
             "args": dict(args)
         }, checkpoint_path)
-        self.print_verbose(f"Saved checkpoint to {checkpoint_path} at iteration {iteration}.")
+        self.print_verbose(
+            f"Saved checkpoint to {checkpoint_path} at iteration {iteration}.")
         self.__checkpoint_num += 1
 
     def save_state_dict_checkpoint(self, net: th.nn.Module, name: str) -> None:
@@ -51,7 +52,8 @@ class CheckPointer:
 
     def load_checkpoint_from_path(self, checkpoint_path: str) -> tuple:
         checkpoint = th.load(checkpoint_path)
-        self.print_verbose(f"Restoring checkpoint {checkpoint_path} made at iteration {checkpoint['iteration']}.")
+        self.print_verbose(
+            f"Restoring checkpoint {checkpoint_path} made at iteration {checkpoint['iteration']}.")
         return checkpoint["net"], checkpoint["optimizer"], checkpoint["memory"], checkpoint["lr"]
 
     def load_checkpoint_from_num(self, checkpoint_num: int) -> tuple:
@@ -68,7 +70,8 @@ class CheckPointer:
             return
         for file_name in os.listdir(self.__checkpoint_dir):
             os.remove(f"{self.__checkpoint_dir}/{file_name}")
-        print(f"Cleared {len(os.listdir(self.__checkpoint_dir))} saved checkpoints (all).")
+        print(
+            f"Cleared {len(os.listdir(self.__checkpoint_dir))} saved checkpoints (all).")
 
     def save_temp_net_checkpoint(self, net) -> None:
         process_pid = os.getpid()
@@ -94,7 +97,8 @@ class CheckPointer:
         return self.__checkpoint_dir
 
     def get_latest_name_match(self, name: str):
-        name_matches = [os.path.join(self.__checkpoint_dir, x) for x in os.listdir(self.__checkpoint_dir) if name in x]
+        name_matches = [os.path.join(self.__checkpoint_dir, x) for x in os.listdir(
+            self.__checkpoint_dir) if name in x]
         name_matches.sort(key=lambda x: os.path.getctime(x))
         return name_matches[-1]
 

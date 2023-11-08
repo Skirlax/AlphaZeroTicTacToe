@@ -3,11 +3,13 @@ import json
 
 
 def main():
-    study = optuna.load_study(study_name="alpha_zero", storage="mysql://root@localhost/alpha_zero")
+    study = optuna.load_study(study_name="alpha_zero",
+                              storage="mysql://root@localhost/alpha_zero")
     with open("best_params.json", "w") as file:
         json.dump(study.best_params, file)
 
-    print(f"Best params saved to best_params.json. The params achieved a score of {study.best_value}.")
+    print(
+        f"Best params saved to best_params.json. The params achieved a score of {study.best_value}.")
 
 
 if __name__ == "__main__":
