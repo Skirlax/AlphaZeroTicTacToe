@@ -25,11 +25,13 @@ def augment_experience_with_symmetries(game_experience: list, board_size) -> lis
         game_experience_.append((state, pi, v))
         for axis, k in zip([0, 1], [1, 3]):
             state_ = np.rot90(state.copy(), k=k)
-            pi_ = np.rot90(pi.copy().reshape(board_size, board_size), k=k).flatten()
+            pi_ = np.rot90(pi.copy().reshape(
+                board_size, board_size), k=k).flatten()
             game_experience_.append((state_, pi_, v))
             del state_, pi_
             state_ = np.flip(state.copy(), axis=axis)
-            pi_ = np.flip(pi.copy().reshape(board_size, board_size), axis=axis).flatten()
+            pi_ = np.flip(pi.copy().reshape(
+                board_size, board_size), axis=axis).flatten()
             game_experience_.append((state_, pi_, v))
 
     return game_experience_
@@ -57,9 +59,12 @@ def make_channels(game_experience: list):
 
 
 def make_channels_from_single(state: np.ndarray):
-    player_one_state = np.where(state == 1, 1, 0)  # fill with 1 where player 1 has a piece else 0
-    player_minus_one_state = np.where(state == -1, 1, 0)  # fill with 1 where player -1 has a piece else 0
-    empty_state = np.where(state == 0, 1, 0)  # fill with 1 where empty spaces else 0
+    # fill with 1 where player 1 has a piece else 0
+    player_one_state = np.where(state == 1, 1, 0)
+    # fill with 1 where player -1 has a piece else 0
+    player_minus_one_state = np.where(state == -1, 1, 0)
+    # fill with 1 where empty spaces else 0
+    empty_state = np.where(state == 0, 1, 0)
     return np.stack([state, player_one_state, player_minus_one_state, empty_state], axis=0)
 
 
@@ -68,7 +73,8 @@ def mask_invalid_actions(probabilities: np.ndarray, observations: np.ndarray, bo
     mask = np.where(observations != 0, -5, observations)
     mask = np.where(mask == 0, 1, mask)
     mask = np.where(mask == -5, 0, mask)
-    valids = probabilities.reshape(-1, board_size ** 2) * mask.reshape(-1, board_size ** 2)
+    valids = probabilities.reshape(-1, board_size ** 2) * \
+        mask.reshape(-1, board_size ** 2)
     valids_sum = valids.sum()
     if valids_sum == 0:
         # When no valid moves are available (shouldn't happen) sum of valids is 0, making the returned valids an array
@@ -163,7 +169,8 @@ def optuna_parameter_search(n_trials: int, init_net_path: str, storage: str, stu
         del trainer
         return win_freq
 
-    from AlphaZero.Network.trainer import Trainer  # import here to avoid circular imports
+    # import here to avoid circular imports
+    from AlphaZero.Network.trainer import Trainer
 
     trial_args = DotDict(test_args)
     trial_args.show_tqdm = False
@@ -213,16 +220,15 @@ def is_notebook():
         return False
 
 
-def upload_checkpoint_to_gdrive(files: list,not_notebook_ok: bool = False):
+def upload_checkpoint_to_gdrive(files: list, not_notebook_ok: bool = False):
     is_nbt = is_notebook()
     if not is_nbt and not_notebook_ok:
         return
     if not is_nbt:
-        raise RuntimeError("This method should only be called from a notebook.")
+        raise RuntimeError(
+            "This method should only be called from a notebook.")
 
     for file in files:
         if not os.path.exists("/content/drive/MyDrive/Checkpoints") and os.path.exists("/content/drive/MyDrive"):
             os.mkdir("/content/drive/MyDrive/Checkpoints")
         shutil.copy(file, "/content/drive/MyDrive/Checkpoints")
-
-

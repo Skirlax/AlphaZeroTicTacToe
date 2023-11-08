@@ -32,7 +32,8 @@ class Node:
         self.state = state.copy()  # copying here is probably not necessary.
 
         for action, probability in enumerate(action_probabilities):
-            node = Node(self.current_player * (-1), select_probability=probability, parent=self)
+            node = Node(self.current_player * (-1),
+                        select_probability=probability, parent=self)
             self.children[action] = node
 
     def was_visited(self):
@@ -43,7 +44,8 @@ class Node:
         if self.q is None:
             self.q = v
         else:
-            self.q = (self.times_visited * self.q + v) / (self.times_visited + 1)
+            self.q = (self.times_visited * self.q + v) / \
+                (self.times_visited + 1)
 
     def get_best_child(self, c=1.5):
         best_utc = -float("inf")
@@ -77,10 +79,11 @@ class Node:
     def calculate_utc(self, c=1.5):
         if self.q is None:
             # Inspiration taken from https://github.com/suragnair/alpha-zero-general/blob/master/MCTS.py
-            utc = c * self.select_probability * math.sqrt(self.parent.times_visited + 1e-8)
+            utc = c * self.select_probability * \
+                math.sqrt(self.parent.times_visited + 1e-8)
         else:
             utc = self.q + c * (
-                    self.select_probability * ((math.sqrt(self.parent.times_visited)) / (1 + self.times_visited)))
+                self.select_probability * ((math.sqrt(self.parent.times_visited)) / (1 + self.times_visited)))
 
         return utc
 

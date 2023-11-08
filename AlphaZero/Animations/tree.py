@@ -1,4 +1,5 @@
-from manimlib import Circle,Text,Scene,VGroup
+from manimlib import Circle, Text, Scene, VGroup
+
 
 class TreeNode(Circle):
     def __init__(self, named_values: dict, **kwargs):
@@ -18,15 +19,12 @@ class SearchTree(Scene):
     def draw_tree(self):
         pass
 
-    def generate_sample_nodes(self,depth: int):
+    def generate_sample_nodes(self, depth: int):
         nodes = VGroup()
         for i in range(depth):
             pass
 
 
-
 if __name__ == "__main__":
     tree = SearchTree()
     tree.render()
-
-

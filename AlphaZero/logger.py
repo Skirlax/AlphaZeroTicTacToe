@@ -15,7 +15,8 @@ class Logger:
             f"{self.logdir}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
         self.file_handler.setLevel(logging.DEBUG)
         self.logger.addHandler(self.file_handler)
-        formatter = logging.Formatter("[%(asctime)s - %(levelname)s] %(message)s")
+        formatter = logging.Formatter(
+            "[%(asctime)s - %(levelname)s] %(message)s")
         self.file_handler.setFormatter(formatter)
 
     def log(self, msg: str, level: str = "debug") -> None:
