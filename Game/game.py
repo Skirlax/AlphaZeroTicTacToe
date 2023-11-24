@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pygame as pg
+import torch as th
 
 
 class GameManager:
@@ -59,6 +60,7 @@ class GameManager:
         :return: A list of results.
         """
         results = []
+        results.append("row")
         for row in arr:
             results.append(func(row.reshape(-1)))
 
@@ -66,11 +68,40 @@ class GameManager:
         for col in arr.T:
             results.append(func(col.reshape(-1)))
 
-        results.append("diag_left")
-        results.append(func(arr.diagonal().reshape(-1)))
-        results.append("diag_right")
-        results.append(func(np.fliplr(arr).diagonal().reshape(-1)))
+        diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        flipped_diags = [np.diag(np.fliplr(arr), k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        diags.extend(flipped_diags)
+        for idx, diag in enumerate(diags):
+            if idx == 0:
+                results.append("diag_left")
+            elif idx == len(diags) // 2:
+                results.append("diag_right")
+            results.append(func(diag.reshape(-1)))
+
+        # results.append("diag_left")
+        # results.append(func(arr.diagonal().reshape(-1)))
+        # results.append("diag_right")
+        # results.append(func(np.fliplr(arr).diagonal().reshape(-1)))
         return results
+
+    def eval_board(self, board: np.ndarray, player: int):
+        score = 0
+        players = [player, -player]
+        for i in range(self.num_to_win, 1, -1):
+            for plr in players:
+                win_dict = self.check_partial_win_to_index(plr, i, board=board)
+                if win_dict["index"] is None or win_dict["pos"] is None:
+                    continue
+                win_idx = win_dict["index"]
+                pos = win_dict["pos"]
+                # []
+                is_next = [board[self.get_next(win_idx, pos, i)] == pl for pl, i in
+                           zip([plr] * (i - 1) + [0], range(1, i + 1))]
+                if board[self.get_previous(win_idx, pos, 1)] == 0 or np.all(is_next):
+                    None
+                    score += i * 10 * -plr
+
+        return score
 
     def full_iterate_array_all_diags(self, arr: np.ndarray, func: callable):
 
@@ -90,6 +121,14 @@ class GameManager:
             results.append(func(diag.reshape(-1)))
 
         return results
+
+    def extract_all_vectors(self, board: np.ndarray):
+        vectors = board.tolist() + board.T.tolist()
+        vectors.extend([np.diag(board, k=i) for i in range(-board.shape[0] + 1, board.shape[1])])
+        vectors.extend([np.diag(np.fliplr(board), k=i) for i in range(-board.shape[0] + 1, board.shape[1])])
+        # pad vectors with -3's to have the same length as the board size and stack them
+        vectors = [np.pad(vector, (0, self.board_size - len(vector)), constant_values=-3) for vector in vectors]
+        return np.array(vectors)
 
     def check_win(self, player: int, board=None) -> bool:
         if self.num_to_win == self.board_size:
@@ -135,6 +174,15 @@ class GameManager:
 
         return False
 
+    def check_partial_win_vectorized(self, player: int, n: int, board=None) -> bool:
+        if board is None:
+            board = self.get_board()
+        vectors = th.tensor(self.extract_all_vectors(board)).unsqueeze(0)
+        weight = th.ones((1, 1, 1, n), dtype=th.long)
+        vectors_where_player = th.where(vectors == player, 1, 0).long()
+        res = th.nn.functional.conv2d(vectors_where_player, weight=weight)
+        return th.any(res == n).item()
+
     def check_partial_win_to_index(self, player: int, n: int, board=None) -> dict[tuple, str] | dict:
         """
         This variation of check_partial_win returns the index of the first partial win found.
@@ -147,19 +195,69 @@ class GameManager:
         if board is None:
             board = self.get_board()
         indices = self.full_iterate_array(board,
-                                          lambda part: np.where(
-                                              np.convolve((part == player), np.ones(n, dtype=int),
-                                                          "valid") == n)[0])
+                                          lambda part:
+                                          np.convolve((part == player), np.ones(n, dtype=int),
+                                                      "valid"))
+        indices = [x.tolist() if not isinstance(x, str) else x for x in indices]
 
         pos = "row"
-        for index in indices:
-            if index is str:
-                pos = index
+        for vector in indices:
+            if isinstance(vector, str):
+                pos = vector
                 continue
-            if len(index) > 0:
-                return {"index": np.unravel_index(index[0], shape=self.board.shape), "pos": pos}
+            for el in vector:
+                if el == n:
+                    vector_index = indices.index(vector)
+                    pos_index = indices.index(pos)
+                    # num_strings_before = len([x for index,x in enumerate(indices) if isinstance(x,str) and index < pos_index])
+                    element_index = vector_index - (pos_index+1) if vector_index > pos_index else indices.index(vector,pos_index)
+                    diag_idx = {"index": ((self.board_size - 1) - element_index, 0)} if element_index < self.board_size else {
+                        "index": (0, element_index - self.board_size)}
+                    diag_idx["pos"] = pos
+                    match pos:
+                        case "row":
+                            return {"index": (element_index, 0), "pos": pos}
+                        case "col":
+                            return {"index": (0, element_index), "pos": pos}
+                        case "diag_left":
+                            return diag_idx
+                        case "diag_right":
+                            return diag_idx
 
-        return {}
+                        # case "diag_right":
+
+        return {"index": None, "pos": None}
+
+    def return_index_if_valid(self, index: tuple, return_on_fail: tuple = ()) -> tuple:
+        if index[0] < 0 or index[0] >= self.board_size or index[1] < 0 or index[1] >= self.board_size:
+            return return_on_fail
+        return index
+
+    def get_previous(self, index: tuple, pos: str, n: int):
+        if np.array(index).all() == 0:
+            return index
+        match pos:
+            case "row":
+                return self.return_index_if_valid((index[0], index[1] - n), return_on_fail=index)
+            case "col":
+                return self.return_index_if_valid((index[0] - n, index[1]), return_on_fail=index)
+            case "diag_left":
+                return self.return_index_if_valid((index[0] - n, index[1] - n), return_on_fail=index)
+            case "diag_right":
+                return self.return_index_if_valid((index[0] - n, index[1] + n), return_on_fail=index)
+
+    def get_next(self, index: tuple, pos: str, n: int):
+        if np.array(index).all() == self.board_size - 1:
+            return index
+        match pos:
+            case "row":
+                return self.return_index_if_valid((index[0], index[1] + n), return_on_fail=index)
+            case "col":
+                return self.return_index_if_valid((index[0] + n, index[1]), return_on_fail=index)
+            case "diag_left":
+                return self.return_index_if_valid((index[0] + n, index[1] + n), return_on_fail=index)
+            case "diag_right":
+                return self.return_index_if_valid((index[0] + n, index[1] - n), return_on_fail=index)
 
     def is_board_full(self, board=None) -> bool:
         if board is None:
@@ -264,12 +362,11 @@ class GameManager:
         """
         if self.check_win(player, board=board):
             return 1.0
-        elif self.check_win(-player, board=board):
+        if self.check_win(-player, board=board):
             return -1.0
-        elif self.is_board_full(board=board):
+        if self.is_board_full(board=board):
             return 1e-4
-        else:
-            return None
+        return None
 
     def network_to_board(self, move):
         """
@@ -306,12 +403,12 @@ class GameManager:
             probs = [0 for _ in range(len(vals))]
             probs[max_idx] = 1
             return dict(zip(action_probs.keys(), probs))
-        else:  # select stochastic
-            moves, probabilities = zip(*action_probs.items())
-            adjusted_probs = [prob ** (1 / tau) for prob in probabilities]
-            adjusted_probs_sum = sum(adjusted_probs)
-            normalized_probs = [prob / adjusted_probs_sum for prob in adjusted_probs]
-            return dict(zip(moves, normalized_probs))
+        # select stochastic
+        moves, probabilities = zip(*action_probs.items())
+        adjusted_probs = [prob ** (1 / tau) for prob in probabilities]
+        adjusted_probs_sum = sum(adjusted_probs)
+        normalized_probs = [prob / adjusted_probs_sum for prob in adjusted_probs]
+        return dict(zip(moves, normalized_probs))
 
     @staticmethod
     def select_move(action_probs: dict):
@@ -320,9 +417,11 @@ class GameManager:
 
     def __str__(self):
         return str(self.board).replace('1', 'X').replace('-1', 'O')
-
+#
 # if __name__ == "__main__":
-#     sample_arr = np.array([[-1,1,-1,1,1],[-1,1,1,-1,-1],[1,-1,1,1,1],[-1,1,1,-1,1],[0,0,-1,1,1]])
+#     sample_arr = np.array([[-1,1,-1,1,1],[-1,1,1,-1,-1],[1,-1,1,1,0],[-1,1,1,-1,0],[0,0,-1,1,1]])
 #     game_manager = GameManager(5, True,num_to_win=3)
-#     res = game_manager.game_result(-1,sample_arr)
-#     print(res)
+# res = game_manager.check_partial_win_vectorized(1,3,sample_arr)
+# res = game_manager.game_result(-1,sample_arr)
+# print(res)
+# print(game_manager.check_partial_win(1,3,sample_arr))

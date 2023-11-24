@@ -14,7 +14,7 @@ class Arena:
 
     def pit(self, player1: Type[Player], player2: Type[Player],
             num_games_to_play: int, num_mc_simulations: int, one_player: bool = False,
-            start_player: int = 1) -> tuple[int, int, int]:
+            start_player: int = 1,add_to_kwargs: dict or None = None) -> tuple[int, int, int]:
         """
         Pit two players against each other for a given number of games and gather the results.
         :param start_player: Which player should start the game.
@@ -37,10 +37,14 @@ class Arena:
                 current_player = start_player
             else:
                 current_player = -start_player
+
             kwargs = {"num_simulations": num_mc_simulations, "current_player": current_player, "device": self.device,
                       "tau": tau}
+            if add_to_kwargs is not None:
+                kwargs.update(add_to_kwargs)
             state = self.game_manager.reset()
-            player1.monte_carlo_tree_search.step_root(None)
+            if player1.name == "NetworkPlayer":
+                player1.monte_carlo_tree_search.step_root(None)
             if player2.name == "NetworkPlayer":
                 player2.monte_carlo_tree_search.step_root(None)
 

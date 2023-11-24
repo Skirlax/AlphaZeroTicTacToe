@@ -1,6 +1,6 @@
 # File for storing constants
 
-board_size = 5
+board_size = 10
 
 SAMPLE_ARGS = {
     "num_net_channels": 512,
@@ -16,7 +16,7 @@ SAMPLE_ARGS = {
     "num_pit_games": 40,
     "random_pit_freq": 3,
     "board_size": board_size,
-    "batch_size": 128,
+    "batch_size": 256,
     "tau": 1,
     "arena_tau": 1e-2,
     "c": 1,
@@ -25,7 +25,7 @@ SAMPLE_ARGS = {
     "max_depth": float("inf"),
     "show_tqdm": True,
     "num_workers": 5,
-    "num_to_win": 3,
+    "num_to_win": 5,
     "log_epsilon": 1e-9,
 }
 

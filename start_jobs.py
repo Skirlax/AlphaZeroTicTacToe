@@ -29,12 +29,12 @@ def main():
     t = int(args.t)
     storage = args.storage
     if storage is None:
-        storage = "mysql://root:584792@localhost/alpha_zero"
+        storage = "mysql://alpha:584792@localhost/alpha_zero"
     study_name = args.study_name
     if study_name is None:
         study_name = "alpha_zero"
 
-    init_net_path = "BackupFiles/h_search_network.pth"
+    init_net_path = "Checkpoints/NetVersions/h_search_network.pth"
 
     print(f"Starting optuna optimization. Using parameters: \n"
           f"Number of parallel processes: {n}\n"
@@ -47,7 +47,7 @@ def main():
     procs = []
     for i in range(n):
         procs.append(subprocess.Popen(
-            ["python3.10", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
+            ["python3.11", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
     for proc in procs:
         proc.wait()
 

@@ -5,9 +5,8 @@ from AlphaZero.Network.trainer import Trainer
 from AlphaZero.constants import SAMPLE_ARGS as args_
 from AlphaZero.constants import TRAINED_NET_ARGS as _args
 from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
-from AlphaZero.Network.nnet import TicTacToeNet
 import argparse
-from AlphaZero.Arena.players import NetPlayer, HumanPlayer
+from AlphaZero.Arena.players import NetPlayer, HumanPlayer,RandomPlayer,MinimaxPlayer
 from AlphaZero.MCTS.search_tree import McSearchTree
 from Game.game import GameManager
 from AlphaZero.Arena.arena import Arena
@@ -64,14 +63,27 @@ def play():
     manager = GameManager(5, headless=False, num_to_win=3)
     search_tree = McSearchTree(manager, args)
     p1 = NetPlayer(net, search_tree, manager)
+    # p1 = RandomPlayer(manager)
     p2 = HumanPlayer(manager)
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager, args, device)
-    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317,one_player=True,start_player=1)
+    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
+                                            start_player=1)
     print(f"Net wins: {net_wins}, Human wins: {human_wins}, Draws: {draws}")
+
+def human_minimax_play():
+    args = DotDict(_args)
+    manager = GameManager(3, headless=False, num_to_win=3)
+    p1 = HumanPlayer(manager)
+    p2 = MinimaxPlayer(manager, evaluate_fn=manager.eval_board)
+    device = th.device("cuda" if th.cuda.is_available() else "cpu")
+    arena = Arena(manager, args, device)
+    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
+                                            start_player=1,add_to_kwargs={"depth":5,"player":-1})
 
 
 if __name__ == "__main__":
+    # human_minimax_play()
     # play()
     main_alpha_zero()
     # main_alpha_zero_find_hyperparameters()

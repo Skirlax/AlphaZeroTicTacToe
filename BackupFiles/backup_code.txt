@@ -14,7 +14,7 @@
 
 !!! Create optuna study command. !!!
 
-optuna create-study --study-name alpha_zero --direction maximize --storage "mysql://root:584792@localhost/alpha_zero"
+optuna create-study --study-name alpha_zero --direction maximize --storage "mysql://root@localhost/alpha_zero"
 
 !!! Old pi_loss function. !!!
 
@@ -23,3 +23,25 @@ def pi_loss(self, y_hat, y, masks):
     masks = masks.reshape(y_hat_log.shape).to(self.device)
     y_hat_log = masks * y_hat_log
     return -th.sum(y * y_hat_log) / y.size()[0]
+
+def check_partial_win(self, player: int, n: int, board=None) -> bool:
+    """
+    This function checks if the supplied player has won the game with a partial win (num_to_win < board_size).
+
+    :param player: The player to check for (1 or -1).
+    :param n: The number of consecutive pieces needed to win.
+    :param board: The board to check on. If None, the current board is used.
+    :return: True if the player has won, False otherwise.
+    """
+    if board is None:
+        board = self.get_board()
+    matches = self.full_iterate_array_all_diags(board,
+                                                lambda part:
+                                                np.convolve((part == player), np.ones(n, dtype=np.int8),
+                                                            "valid"))
+
+    for match in matches:
+        if np.any(match == n):
+            return True
+
+    return False

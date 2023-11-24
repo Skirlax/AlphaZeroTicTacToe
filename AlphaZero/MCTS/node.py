@@ -1,7 +1,7 @@
 import math
-import random
 
 import numpy as np
+
 from Game.game import GameManager
 
 

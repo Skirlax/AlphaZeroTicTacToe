@@ -19,7 +19,7 @@ class TicTacToeNet(nn.Module):
 
         # Fully connected layers
         # 4608 (5x5) or 512 (3x3) or 32768 (10x10)
-        self.fc1 = nn.Linear(4608, 1024)
+        self.fc1 = nn.Linear(32768, 1024)
         self.fc1_bn = nn.BatchNorm1d(1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc2_bn = nn.BatchNorm1d(512)

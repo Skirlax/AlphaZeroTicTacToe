@@ -1,10 +1,12 @@
 import os
-
+import shutil
+import uuid
 import numpy as np
 import optuna
+import pygraphviz
 import torch as th
 from IPython import get_ipython
-import shutil
+
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.constants import SAMPLE_ARGS as test_args
 from mem_buffer import MemBuffer
@@ -213,7 +215,7 @@ def is_notebook():
         return False
 
 
-def upload_checkpoint_to_gdrive(files: list,not_notebook_ok: bool = False):
+def upload_checkpoint_to_gdrive(files: list, not_notebook_ok: bool = False):
     is_nbt = is_notebook()
     if not is_nbt and not_notebook_ok:
         return
@@ -226,3 +228,36 @@ def upload_checkpoint_to_gdrive(files: list,not_notebook_ok: bool = False):
         shutil.copy(file, "/content/drive/MyDrive/Checkpoints")
 
 
+def visualize_tree(root_node, output_file_name: str, depth_limit: int | None = None):
+    graph = pygraphviz.AGraph()
+    graph.graph_attr["label"] = "MCTS visualization"
+    graph.node_attr["shape"] = "circle"
+    graph.edge_attr["color"] = "blue"
+    graph.node_attr["color"] = "gold"
+    if depth_limit is None:
+        depth_limit = float("inf")
+
+    def make_graph(node, parent,g: pygraphviz.AGraph, d_limit: int):
+
+        state_ = None
+        if node.state is None:
+            state_ = str(np.random.randint(low=0,high=5,size=parent.state.shape))
+        else:
+            state_ = str(node.state)
+        g.add_node(state_)
+        if parent != node:
+            g.add_edge(str(parent.state),state_)
+        if not node.was_visited() or d_limit <= 0:
+            return
+        # queue_ = deque(root_node.children.values())
+        # depth = 1
+        # num_children = 25
+        # children_iterated = 0
+        # parent = root_node
+
+        for child in node.children.values():
+            make_graph(child,node,g,d_limit=d_limit - 1 if depth_limit != float("inf") else depth_limit)
+
+    make_graph(root_node, root_node,graph, d_limit=depth_limit)
+    graph.layout(prog="dot")
+    graph.draw(f"{output_file_name}.png")
