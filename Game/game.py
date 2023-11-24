@@ -68,8 +68,10 @@ class GameManager:
         for col in arr.T:
             results.append(func(col.reshape(-1)))
 
-        diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
-        flipped_diags = [np.diag(np.fliplr(arr), k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        diags = [np.diag(arr, k=i)
+                 for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        flipped_diags = [np.diag(np.fliplr(arr), k=i)
+                         for i in range(-arr.shape[0] + 1, arr.shape[1])]
         diags.extend(flipped_diags)
         for idx, diag in enumerate(diags):
             if idx == 0:
@@ -112,8 +114,10 @@ class GameManager:
         for col in arr.T:
             results.append(func(col.reshape(-1)))
 
-        diags = [np.diag(arr, k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
-        flipped_diags = [np.diag(np.fliplr(arr), k=i) for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        diags = [np.diag(arr, k=i)
+                 for i in range(-arr.shape[0] + 1, arr.shape[1])]
+        flipped_diags = [np.diag(np.fliplr(arr), k=i)
+                         for i in range(-arr.shape[0] + 1, arr.shape[1])]
         diags.extend(flipped_diags)
         for diag in diags:
             # if diag.size < self.num_to_win:
@@ -124,10 +128,13 @@ class GameManager:
 
     def extract_all_vectors(self, board: np.ndarray):
         vectors = board.tolist() + board.T.tolist()
-        vectors.extend([np.diag(board, k=i) for i in range(-board.shape[0] + 1, board.shape[1])])
-        vectors.extend([np.diag(np.fliplr(board), k=i) for i in range(-board.shape[0] + 1, board.shape[1])])
+        vectors.extend([np.diag(board, k=i)
+                       for i in range(-board.shape[0] + 1, board.shape[1])])
+        vectors.extend([np.diag(np.fliplr(board), k=i)
+                       for i in range(-board.shape[0] + 1, board.shape[1])])
         # pad vectors with -3's to have the same length as the board size and stack them
-        vectors = [np.pad(vector, (0, self.board_size - len(vector)), constant_values=-3) for vector in vectors]
+        vectors = [np.pad(vector, (0, self.board_size - len(vector)),
+                          constant_values=-3) for vector in vectors]
         return np.array(vectors)
 
     def check_win(self, player: int, board=None) -> bool:
@@ -145,7 +152,8 @@ class GameManager:
         """
         if board is None:
             board = self.get_board()
-        matches = self.full_iterate_array(board, lambda part: np.all(part == player))
+        matches = self.full_iterate_array(
+            board, lambda part: np.all(part == player))
         for match in matches:
             if not isinstance(match, str) and match:
                 return True
@@ -198,7 +206,8 @@ class GameManager:
                                           lambda part:
                                           np.convolve((part == player), np.ones(n, dtype=int),
                                                       "valid"))
-        indices = [x.tolist() if not isinstance(x, str) else x for x in indices]
+        indices = [x.tolist() if not isinstance(x, str)
+                   else x for x in indices]
 
         pos = "row"
         for vector in indices:
@@ -210,7 +219,8 @@ class GameManager:
                     vector_index = indices.index(vector)
                     pos_index = indices.index(pos)
                     # num_strings_before = len([x for index,x in enumerate(indices) if isinstance(x,str) and index < pos_index])
-                    element_index = vector_index - (pos_index+1) if vector_index > pos_index else indices.index(vector,pos_index)
+                    element_index = vector_index - \
+                        (pos_index+1) if vector_index > pos_index else indices.index(vector, pos_index)
                     diag_idx = {"index": ((self.board_size - 1) - element_index, 0)} if element_index < self.board_size else {
                         "index": (0, element_index - self.board_size)}
                     diag_idx["pos"] = pos
@@ -306,7 +316,8 @@ class GameManager:
     def _draw_board(self):
         for x in range(0, self.board_size * 100, 100):
             for y in range(0, self.board_size * 100, 100):
-                pg.draw.rect(self.screen, (255, 255, 255), pg.Rect(x, y, 100, 100), 1)
+                pg.draw.rect(self.screen, (255, 255, 255),
+                             pg.Rect(x, y, 100, 100), 1)
 
     def is_empty(self, index: tuple) -> bool:
         return self.board[index] == 0
@@ -407,7 +418,8 @@ class GameManager:
         moves, probabilities = zip(*action_probs.items())
         adjusted_probs = [prob ** (1 / tau) for prob in probabilities]
         adjusted_probs_sum = sum(adjusted_probs)
-        normalized_probs = [prob / adjusted_probs_sum for prob in adjusted_probs]
+        normalized_probs = [
+            prob / adjusted_probs_sum for prob in adjusted_probs]
         return dict(zip(moves, normalized_probs))
 
     @staticmethod

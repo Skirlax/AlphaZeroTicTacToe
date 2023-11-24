@@ -1,7 +1,6 @@
 
 
-
-def run_seq(start,step,until_equal):
+def run_seq(start, step, until_equal):
     x = 0
     iter_ = 0
     while x != until_equal:
@@ -12,4 +11,4 @@ def run_seq(start,step,until_equal):
 
 
 if __name__ == "__main__":
-    run_seq(800,25,5700)
+    run_seq(800, 25, 5700)

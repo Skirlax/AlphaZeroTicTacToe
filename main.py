@@ -1,24 +1,27 @@
+from AlphaZero.Arena.players import NetPlayer, HumanPlayer, RandomPlayer, MinimaxPlayer
+import torch as th
+from AlphaZero.Arena.arena import Arena
+from Game.game import GameManager
+from AlphaZero.MCTS.search_tree import McSearchTree
+import argparse
+from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
+from AlphaZero.constants import TRAINED_NET_ARGS as _args
+from AlphaZero.constants import SAMPLE_ARGS as args_
+from AlphaZero.Network.trainer import Trainer
 import os
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-from AlphaZero.Network.trainer import Trainer
-from AlphaZero.constants import SAMPLE_ARGS as args_
-from AlphaZero.constants import TRAINED_NET_ARGS as _args
-from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
-import argparse
-from AlphaZero.Arena.players import NetPlayer, HumanPlayer,RandomPlayer,MinimaxPlayer
-from AlphaZero.MCTS.search_tree import McSearchTree
-from Game.game import GameManager
-from AlphaZero.Arena.arena import Arena
-import torch as th
 
 
 def main_alpha_zero_find_hyperparameters():
     parser_ = argparse.ArgumentParser()
     parser_.add_argument("-s", "--storage", help="The storage string to use.")
-    parser_.add_argument("-n", "--study_name", help="The name of the optuna study to use.")
-    parser_.add_argument("-t", "--n_trials", help="The number of trials to run.")
-    parser_.add_argument("-i", "--init_net_path", help="The path to the initial network.")
+    parser_.add_argument("-n", "--study_name",
+                         help="The name of the optuna study to use.")
+    parser_.add_argument("-t", "--n_trials",
+                         help="The number of trials to run.")
+    parser_.add_argument("-i", "--init_net_path",
+                         help="The path to the initial network.")
 
     args_ = parser_.parse_args()
     storage = args_.storage
@@ -58,7 +61,8 @@ def main_alpha_zero():
 
 def play():
     args = DotDict(_args)
-    net = make_net_from_checkpoint("Nets/FinalNets/5x5_3/latest_trained_net.pth", args)
+    net = make_net_from_checkpoint(
+        "Nets/FinalNets/5x5_3/latest_trained_net.pth", args)
     net.eval()
     manager = GameManager(5, headless=False, num_to_win=3)
     search_tree = McSearchTree(manager, args)
@@ -71,6 +75,7 @@ def play():
                                             start_player=1)
     print(f"Net wins: {net_wins}, Human wins: {human_wins}, Draws: {draws}")
 
+
 def human_minimax_play():
     args = DotDict(_args)
     manager = GameManager(3, headless=False, num_to_win=3)
@@ -79,7 +84,7 @@ def human_minimax_play():
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager, args, device)
     net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
-                                            start_player=1,add_to_kwargs={"depth":5,"player":-1})
+                                            start_player=1, add_to_kwargs={"depth": 5, "player": -1})
 
 
 if __name__ == "__main__":

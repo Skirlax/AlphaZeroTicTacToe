@@ -40,7 +40,8 @@ class NetPlayer(Player):
             raise KeyError("Missing keyword argument. Please supply kwargs: current_player, device, "
                            "tau")
 
-        pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device, tau=tau)
+        pi, _ = self.monte_carlo_tree_search.search(
+            self.network, board, current_player, device, tau=tau)
         move = self.game_manager.select_move(pi)
         # visualize_tree(self.monte_carlo_tree_search.root_node, output_file_name="tree_viz",depth_limit=2)
         self.monte_carlo_tree_search.step_root(None)
@@ -54,7 +55,8 @@ class HumanPlayer(Player):
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         if self.game_manager.headless:
-            raise RuntimeError("Cannot play with a human player in headless mode.")
+            raise RuntimeError(
+                "Cannot play with a human player in headless mode.")
         move = self.game_manager.get_human_input(board)
         return move
 
@@ -70,7 +72,8 @@ class MinimaxPlayer(Player):
             depth = kwargs["depth"]
             player = kwargs["player"]
         except KeyError:
-            raise KeyError("Missing keyword argument. Please supply kwargs: depth, player")
+            raise KeyError(
+                "Missing keyword argument. Please supply kwargs: depth, player")
         move = self.minimax(board, depth, True, player)[1]
         return tuple(move)
 
@@ -84,7 +87,8 @@ class MinimaxPlayer(Player):
             best_move = None
             for move in self.game_manager.get_legal_moves_on_observation(board):
                 board[move[0]][move[1]] = player
-                score = self.minimax(board.copy(), depth - 1, False, -player, alpha, beta)[0]
+                score = self.minimax(
+                    board.copy(), depth - 1, False, -player, alpha, beta)[0]
                 if score > best_score:
                     best_move = move
                 best_score = max(score, best_score)
@@ -99,7 +103,8 @@ class MinimaxPlayer(Player):
             best_move = None
             for move in self.game_manager.get_legal_moves_on_observation(board):
                 board[move[0]][move[1]] = player
-                score = self.minimax(board.copy(), depth - 1, True, -player, alpha, beta)[0]
+                score = self.minimax(
+                    board.copy(), depth - 1, True, -player, alpha, beta)[0]
                 if score < best_score:
                     best_move = move
                 best_score = min(score, best_score)

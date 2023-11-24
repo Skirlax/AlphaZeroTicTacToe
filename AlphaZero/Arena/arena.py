@@ -14,7 +14,7 @@ class Arena:
 
     def pit(self, player1: Type[Player], player2: Type[Player],
             num_games_to_play: int, num_mc_simulations: int, one_player: bool = False,
-            start_player: int = 1,add_to_kwargs: dict or None = None) -> tuple[int, int, int]:
+            start_player: int = 1, add_to_kwargs: dict or None = None) -> tuple[int, int, int]:
         """
         Pit two players against each other for a given number of games and gather the results.
         :param start_player: Which player should start the game.
