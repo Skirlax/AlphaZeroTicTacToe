@@ -1,7 +1,10 @@
+
 import os
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+
 from AlphaZero.Network.trainer import Trainer
+
 from AlphaZero.constants import SAMPLE_ARGS as args_
 from AlphaZero.constants import TRAINED_NET_ARGS as _args
 from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
@@ -10,6 +13,7 @@ from AlphaZero.Arena.players import NetPlayer, HumanPlayer,RandomPlayer,MinimaxP
 from AlphaZero.MCTS.search_tree import McSearchTree
 from Game.game import GameManager
 from AlphaZero.Arena.arena import Arena
+
 import torch as th
 
 
@@ -84,6 +88,7 @@ def human_minimax_play():
 
 if __name__ == "__main__":
     # human_minimax_play()
-    # play()
-    main_alpha_zero()
+    play()
+
+    # main_alpha_zero()
     # main_alpha_zero_find_hyperparameters()

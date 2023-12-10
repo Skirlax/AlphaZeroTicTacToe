@@ -55,6 +55,9 @@ class TicTacToeNet(nn.Module):
         pi = th.exp(pi)
         return pi.detach().cpu().numpy(), v.detach().cpu().numpy()
 
+    def to_traced_script(self):
+        return th.jit.trace(self, th.rand(1, 10, 10).cuda())
+
 
 class TicTacToeNetNoNorm(nn.Module):
     def __init__(self, in_channels, num_channels, dropout, action_size):

@@ -3,7 +3,7 @@ import shutil
 import uuid
 import numpy as np
 import optuna
-import pygraphviz
+# import pygraphviz
 import torch as th
 from IPython import get_ipython
 
@@ -261,3 +261,16 @@ def visualize_tree(root_node, output_file_name: str, depth_limit: int | None = N
     make_graph(root_node, root_node,graph, d_limit=depth_limit)
     graph.layout(prog="dot")
     graph.draw(f"{output_file_name}.png")
+
+def cpp_data_to_memory(data: list,memory:MemBuffer,args: DotDict):
+    # import pickle
+    # test_data = pickle.load(open(f"{find_project_root()}/history.pkl","rb"))
+    for game_data in data:
+        for state, pi, v in game_data:
+            state = th.tensor(state, dtype=th.float32).reshape(args["board_size"],args["board_size"])
+            pi = th.tensor(pi, dtype=th.float32)
+            memory.add((state, pi, v))
+
+#
+# if __name__ == "__main__":
+#     cpp_data_to_memory(None,MemBuffer(max_size=10_000),test_args)

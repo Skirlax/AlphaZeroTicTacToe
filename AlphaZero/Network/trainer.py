@@ -1,3 +1,4 @@
+import CpSelfPlay
 from copy import deepcopy
 
 import joblib
@@ -20,6 +21,7 @@ from mem_buffer import MemBuffer
 
 joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
 from multiprocessing import set_start_method
+import pickle
 
 set_start_method('spawn', force=True)
 
@@ -120,16 +122,27 @@ class Trainer:
         for i in self.make_tqdm_bar(range(num_iters), "Training Progress", 0):
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
+                args_ = self.args.copy()
+                args_.pop("max_depth")
+                args_.pop("checkpoint_dir")
+                traced = self.network.to_traced_script()
+                traced_save_path = "/home/skyr/PycharmProjects/AlphaZeroTicTacToe/traced.pt"
+                traced.save(traced_save_path)
+                history, wins_p1, wins_p2, game_draws = CpSelfPlay.CparallelSelfPlay(self.args["num_workers"],
+                                                                                     self_play_games, traced_save_path,
+                                                                                     args_)
+                with open("history.pkl", "wb") as f:
+                    pickle.dump(history, f)
                 # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
-                wins_p1, wins_p2, game_draws = 0, 0, 0
-                for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
-                    game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
-                    # print(f"Game {j + 1} finished.")
-                    self.mcts.step_root(None)  # reset the search tree
-                    self.memory.add_list(game_history)
-                    wins_p1 += wins_one
-                    wins_p2 += wins_minus_one
-                    game_draws += draws
+                # wins_p1, wins_p2, game_draws = 0, 0, 0
+                # for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
+                #     game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
+                #     # print(f"Game {j + 1} finished.")
+                #     self.mcts.step_root(None)  # reset the search tree
+                #     self.memory.add_list(game_history)
+                #     wins_p1 += wins_one
+                #     wins_p2 += wins_minus_one
+                #     game_draws += draws
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
 
             self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
