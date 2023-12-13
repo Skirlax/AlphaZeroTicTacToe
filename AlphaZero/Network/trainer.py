@@ -1,3 +1,5 @@
+import pickle
+from multiprocessing import set_start_method
 import CpSelfPlay
 from copy import deepcopy
 
@@ -15,13 +17,11 @@ from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
 from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args, \
-    upload_checkpoint_to_gdrive,cpp_data_to_memory
+    upload_checkpoint_to_gdrive, cpp_data_to_memory
 from Game.game import GameManager
 from mem_buffer import MemBuffer
 
 joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
-from multiprocessing import set_start_method
-import pickle
 
 set_start_method('spawn', force=True)
 
@@ -53,17 +53,20 @@ class Trainer:
     def from_checkpoint(cls, args: dict, checkpoint_num: int, headless: bool = True,
                         checkpointer_verbose: bool = False):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
-        checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
+        checkpointer = CheckPointer(
+            args["checkpoint_dir"], verbose=checkpointer_verbose)
         if checkpoint_num < 0:
             highest_num = checkpointer.get_highest_checkpoint_num()
             if highest_num is None:
-                raise FileNotFoundError("No checkpoints found, nothing to restore.")
+                raise FileNotFoundError(
+                    "No checkpoints found, nothing to restore.")
             if checkpoint_num < -1:
                 checkpoint_num = highest_num + checkpoint_num
             else:
                 checkpoint_num = highest_num
 
-        network_dict, optimizer_dict, memory, lr = checkpointer.load_checkpoint_from_num(checkpoint_num)
+        network_dict, optimizer_dict, memory, lr = checkpointer.load_checkpoint_from_num(
+            checkpoint_num)
         network, optimizer, _ = build_all_from_args(args, device, lr=lr)
         del _
         network.load_state_dict(network_dict)
@@ -76,7 +79,8 @@ class Trainer:
 
         args = data.pop("args")
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
-        network, optimizer, _ = build_all_from_args(args, device, lr=data["lr"])
+        network, optimizer, _ = build_all_from_args(
+            args, device, lr=data["lr"])
         del _
         opponent_network = build_net_from_args(args, device)
         opponent_network.load_state_dict(data.pop("opponent_state_dict"))
@@ -85,21 +89,24 @@ class Trainer:
 
         memory = data.pop("memory")
         args["lr"] = data.pop("lr")
-        checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
+        checkpointer = CheckPointer(
+            args["checkpoint_dir"], verbose=checkpointer_verbose)
         return cls(network, optimizer, memory, args, checkpointer, device, headless=headless)
 
     @classmethod
     def create(cls, args: dict, headless: bool = True, checkpointer_verbose: bool = False):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         net, optimizer, memory = build_all_from_args(args, device)
-        checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
+        checkpointer = CheckPointer(
+            args["checkpoint_dir"], verbose=checkpointer_verbose)
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
     @classmethod
     def from_state_dict(cls, path: str, args: dict, headless: bool = True, checkpointer_verbose: bool = False):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         net, optimizer, memory = build_all_from_args(args, device)
-        checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
+        checkpointer = CheckPointer(
+            args["checkpoint_dir"], verbose=checkpointer_verbose)
         net.load_state_dict(th.load(path))
         return cls(net, optimizer, memory, args, checkpointer, device, headless=headless)
 
@@ -109,7 +116,8 @@ class Trainer:
         return -th.sum(y * masked_y_hat) / y.size()[0]
 
     def train(self) -> TicTacToeNet:
-        self.logger.log(LoggingMessageTemplates.TRAINING_START(self.args["num_iters"]))
+        self.logger.log(LoggingMessageTemplates.TRAINING_START(
+            self.args["num_iters"]))
         self.opponent_network.load_state_dict(self.network.state_dict())
         # self.checkpointer.save_state_dict_checkpoint(self.network, "h_search_network")
         num_iters = self.args["num_iters"]
@@ -121,7 +129,8 @@ class Trainer:
 
         for i in self.make_tqdm_bar(range(num_iters), "Training Progress", 0):
             with th.no_grad():
-                self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
+                self.logger.log(
+                    LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
                 args_ = self.args.copy()
                 args_.pop("max_depth")
                 args_.pop("checkpoint_dir")
@@ -131,7 +140,8 @@ class Trainer:
                 history, wins_p1, wins_p2, game_draws = CpSelfPlay.CparallelSelfPlay(self.args["num_workers"],
                                                                                      self_play_games, traced_save_path,
                                                                                      args_)
-                cpp_data_to_memory(history,self.memory,self.args["board_size"])
+                cpp_data_to_memory(history, self.memory,
+                                   self.args["board_size"])
                 # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
                 # wins_p1, wins_p2, game_draws = 0, 0, 0
                 # for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
@@ -142,7 +152,8 @@ class Trainer:
                 #     wins_p1 += wins_one
                 #     wins_p2 += wins_minus_one
                 #     game_draws += draws
-                self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
+                self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(
+                    wins_p1, wins_p2, game_draws))
 
             # self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
             # self.summary_writer.add_scalar("Self-Play Loss Percentage Player One",
@@ -151,11 +162,13 @@ class Trainer:
 
             self.checkpointer.save_temp_net_checkpoint(self.network)
             self.checkpointer.load_temp_net_checkpoint(self.opponent_network)
-            self.logger.log(LoggingMessageTemplates.SAVED("temp checkpoint", self.checkpointer.get_temp_path()))
+            self.logger.log(LoggingMessageTemplates.SAVED(
+                "temp checkpoint", self.checkpointer.get_temp_path()))
 
             self.network.train()
             self.memory.shuffle()
-            self.logger.log(LoggingMessageTemplates.NETWORK_TRAINING_START(epochs))
+            self.logger.log(
+                LoggingMessageTemplates.NETWORK_TRAINING_START(epochs))
             mean_loss = self.train_network(epochs, i, batch_size)
             self.checkpointer.save_checkpoint(self.network, self.optimizer, self.memory,
                                               self.args["lr"], i, self.args, name="latest_trained_net")
@@ -163,21 +176,27 @@ class Trainer:
             #                              self.checkpointer.get_latest_name_match(self.checkpointer.get_name_prefix())],
             #                             not_notebook_ok=True)
 
-            self.logger.log(LoggingMessageTemplates.NETWORK_TRAINING_END(mean_loss))
+            self.logger.log(
+                LoggingMessageTemplates.NETWORK_TRAINING_END(mean_loss))
 
-            self.logger.log(LoggingMessageTemplates.LOADED("opponent network", self.checkpointer.get_temp_path()))
+            self.logger.log(LoggingMessageTemplates.LOADED(
+                "opponent network", self.checkpointer.get_temp_path()))
             self.network.eval()
             self.opponent_network.eval()
-            p1_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
-            p2_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p1_game_manager = GameManager(
+                self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p2_game_manager = GameManager(
+                self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_game_manager, self.args)
             p2_tree = McSearchTree(p2_game_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_game_manager)
             p2 = NetPlayer(self.opponent_network, p2_tree, p2_game_manager)
             num_games = self.args["num_pit_games"]
             update_threshold = self.args["update_threshold"]
-            self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, p2.name, num_games))
-            p1_wins, p2_wins, draws = self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
+            self.logger.log(LoggingMessageTemplates.PITTING_START(
+                p1.name, p2.name, num_games))
+            p1_wins, p2_wins, draws = self.arena.pit(
+                p1, p2, num_games, num_mc_simulations=num_simulations)
             self.logger.log(LoggingMessageTemplates.PITTING_END(p1.name, p2.name, p1_wins,
                                                                 p2_wins, draws))
             self.arena_win_frequencies.append(p1_wins / num_games)
@@ -193,7 +212,8 @@ class Trainer:
                 with th.no_grad():
                     random_player = RandomPlayer(self.game_manager)
                     p1 = NetPlayer(self.network, self.mcts, self.game_manager)
-                    self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, random_player.name, num_games))
+                    self.logger.log(LoggingMessageTemplates.PITTING_START(
+                        p1.name, random_player.name, num_games))
                     p1_wins_random, p2_wins_random, draws_random = self.arena.pit(p1, random_player, num_games,
                                                                                   num_mc_simulations=num_simulations)
                     self.logger.log(
@@ -236,9 +256,11 @@ class Trainer:
 
     def only_pit(self, p1: Player, p2: Player, num_games: int):
         if p1 == NetPlayer and p2 == NetPlayer:
-            p1_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p1_manager = GameManager(
+                self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_manager, self.args)
-            p2_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p2_manager = GameManager(
+                self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p2_tree = McSearchTree(p2_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_manager)
             p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
@@ -261,7 +283,8 @@ class Trainer:
         trees = self.make_n_trees(n_jobs)
         n_games_per_job = n_games // n_jobs
         results = Parallel(n_jobs=n_jobs, backend="multiprocessing")(
-            delayed(self_play)(networks[i], n_games_per_job, trees[i], self.device)
+            delayed(self_play)(networks[i],
+                               n_games_per_job, trees[i], self.device)
             for i in range(n_jobs))
         wins_one = 0
         wins_two = 0
@@ -291,7 +314,8 @@ class Trainer:
         """
         trees = []
         for i in range(n):
-            manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            manager = GameManager(
+                self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             trees.append(McSearchTree(manager, dict(self.args)))
         return trees
 
@@ -305,18 +329,23 @@ class Trainer:
         :return: The mean loss over all epochs.
         """
         losses = []
-        self.optimizer = th.optim.Adam(self.network.parameters(), lr=self.args["lr"])
+        self.optimizer = th.optim.Adam(
+            self.network.parameters(), lr=self.args["lr"])
         for epoch in self.make_tqdm_bar(range(epochs), "Network Training Progress", 1, leave=False):
             for experience_batch in self.memory(batch_size):
                 if len(experience_batch) <= 1:
                     continue
                 states, pi, v = zip(*experience_batch)
-                states = th.tensor(np.array(states), dtype=th.float32, device=self.device)
-                pi = th.tensor(np.array(pi), dtype=th.float32, device=self.device)
-                v = th.tensor(v, dtype=th.float32, device=self.device).unsqueeze(1)
+                states = th.tensor(
+                    np.array(states), dtype=th.float32, device=self.device)
+                pi = th.tensor(np.array(pi), dtype=th.float32,
+                               device=self.device)
+                v = th.tensor(v, dtype=th.float32,
+                              device=self.device).unsqueeze(1)
                 pi_pred, v_pred = self.network(states)
                 masks = mask_invalid_actions_batch(states)
-                loss = self.mse_loss(v_pred, v) + self.pi_loss(pi_pred, pi, masks)
+                loss = self.mse_loss(v_pred, v) + \
+                    self.pi_loss(pi_pred, pi, masks)
                 losses.append(loss.item())
                 # self.summary_writer.add_scalar("Loss", loss.item(), i * epochs + epoch)
 
@@ -357,15 +386,18 @@ class Trainer:
 
     def get_network_mem_size(self):
         # This is approximate and doesn't consider peak usage.
-        mem_params = sum([param.nelement() * param.element_size() for param in self.network.parameters()])
-        mem_bufs = sum([buf.nelement() * buf.element_size() for buf in self.network.buffers()])
+        mem_params = sum([param.nelement() * param.element_size()
+                         for param in self.network.parameters()])
+        mem_bufs = sum([buf.nelement() * buf.element_size()
+                       for buf in self.network.buffers()])
         return (mem_params + mem_bufs) / (1024 ** 2)
 
 
 def self_play(network: TicTacToeNet, num_games: int, tree: McSearchTree, device):
     results = []
     for game in range(num_games):
-        game_history, wins_one, wins_two, draws = tree.play_one_game(network, device)
+        game_history, wins_one, wins_two, draws = tree.play_one_game(
+            network, device)
         tree.step_root(None)
         results.append([game_history, wins_one, wins_two, draws])
     return results
