@@ -15,7 +15,7 @@ from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
 from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args, \
-    upload_checkpoint_to_gdrive
+    upload_checkpoint_to_gdrive,cpp_data_to_memory
 from Game.game import GameManager
 from mem_buffer import MemBuffer
 
@@ -126,13 +126,12 @@ class Trainer:
                 args_.pop("max_depth")
                 args_.pop("checkpoint_dir")
                 traced = self.network.to_traced_script()
-                traced_save_path = "/home/skyr/PycharmProjects/AlphaZeroTicTacToe/traced.pt"
+                traced_save_path = "traced.pt"
                 traced.save(traced_save_path)
                 history, wins_p1, wins_p2, game_draws = CpSelfPlay.CparallelSelfPlay(self.args["num_workers"],
                                                                                      self_play_games, traced_save_path,
                                                                                      args_)
-                with open("history.pkl", "wb") as f:
-                    pickle.dump(history, f)
+                cpp_data_to_memory(history,self.memory,self.args["board_size"])
                 # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args.num_workers, self_play_games)
                 # wins_p1, wins_p2, game_draws = 0, 0, 0
                 # for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
@@ -145,10 +144,10 @@ class Trainer:
                 #     game_draws += draws
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
 
-            self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
-            self.summary_writer.add_scalar("Self-Play Loss Percentage Player One",
-                                           wins_p2 / self_play_games, i)
-            self.summary_writer.add_scalar("Self-Play Draw Percentage", game_draws / self_play_games, i)
+            # self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
+            # self.summary_writer.add_scalar("Self-Play Loss Percentage Player One",
+            #                                wins_p2 / self_play_games, i)
+            # self.summary_writer.add_scalar("Self-Play Draw Percentage", game_draws / self_play_games, i)
 
             self.checkpointer.save_temp_net_checkpoint(self.network)
             self.checkpointer.load_temp_net_checkpoint(self.opponent_network)
@@ -183,11 +182,11 @@ class Trainer:
                                                                 p2_wins, draws))
             self.arena_win_frequencies.append(p1_wins / num_games)
             wins_total = self.not_zero(p1_wins + p2_wins)
-            self.summary_writer.add_scalar("Net_vs_Net Win Percentage Player One", p1_wins / wins_total,
-                                           i)
-            self.summary_writer.add_scalar("Net_vs_Net Loss Percentage Player One",
-                                           p2_wins / wins_total, i)
-            self.summary_writer.add_scalar("Net_vs_Net Draw Percentage", draws / num_games, i)
+            # self.summary_writer.add_scalar("Net_vs_Net Win Percentage Player One", p1_wins / wins_total,
+            #                                i)
+            # self.summary_writer.add_scalar("Net_vs_Net Loss Percentage Player One",
+            #                                p2_wins / wins_total, i)
+            # self.summary_writer.add_scalar("Net_vs_Net Draw Percentage", draws / num_games, i)
 
             if i % self.args["random_pit_freq"] == 0:
                 self.network.eval()
@@ -200,12 +199,12 @@ class Trainer:
                     self.logger.log(
                         LoggingMessageTemplates.PITTING_END(p1.name, random_player.name, p1_wins_random,
                                                             p2_wins_random, draws_random))
-                    self.summary_writer.add_scalar("Net_vs_Random Win Percentage Player One",
-                                                   p1_wins_random / num_games, i)
-                    self.summary_writer.add_scalar("Net_vs_Random Loss Percentage Player One",
-                                                   p2_wins_random / num_games, i)
-                    self.summary_writer.add_scalar("Net_vs_Random Draw Percentage",
-                                                   draws_random / num_games, i)
+                    # self.summary_writer.add_scalar("Net_vs_Random Win Percentage Player One",
+                    #                                p1_wins_random / num_games, i)
+                    # self.summary_writer.add_scalar("Net_vs_Random Loss Percentage Player One",
+                    #                                p2_wins_random / num_games, i)
+                    # self.summary_writer.add_scalar("Net_vs_Random Draw Percentage",
+                    #                                draws_random / num_games, i)
 
             if p1_wins / wins_total > update_threshold:
                 self.logger.log(LoggingMessageTemplates.MODEL_ACCEPT(p1_wins / wins_total,
@@ -319,7 +318,7 @@ class Trainer:
                 masks = mask_invalid_actions_batch(states)
                 loss = self.mse_loss(v_pred, v) + self.pi_loss(pi_pred, pi, masks)
                 losses.append(loss.item())
-                self.summary_writer.add_scalar("Loss", loss.item(), i * epochs + epoch)
+                # self.summary_writer.add_scalar("Loss", loss.item(), i * epochs + epoch)
 
                 self.optimizer.zero_grad()
                 loss.backward()

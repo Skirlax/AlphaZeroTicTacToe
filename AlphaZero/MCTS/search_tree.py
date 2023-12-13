@@ -14,6 +14,21 @@ class McSearchTree:
         self.root_node = None
 
     def play_one_game(self, network, device) -> tuple[list, int, int, int]:
+        """
+        Plays a single game using the Monte Carlo Tree Search algorithm.
+
+        Args:
+            network: The neural network used for searching and evaluating moves.
+            device: The device (e.g., CPU or GPU) on which the network is located.
+
+        Returns:
+            A tuple containing the game history, and the number of wins, losses, and draws.
+            The game history is a list of tuples, where each tuple contains:
+            - The game state multiplied by the current player
+            - The policy vector (probability distribution over moves)
+            - The game result (1 for a win, -1 for a loss, 0 for a draw)
+            - The current player (-1 or 1)
+        """
         # tau = self.args["tau"]
         state = self.game_manager.reset()
         current_player = 1
@@ -115,6 +130,16 @@ class McSearchTree:
         return self.root_node.get_self_action_probabilities(tau=tau), self.root_node.get_self_value()
 
     def backprop(self, v, path):
+        """
+        Backpropagates the value `v` through the search tree, updating the relevant nodes.
+
+        Args:
+            v (float): The value to be backpropagated.
+            path (list): The path from the leaf node to the root node.
+
+        Returns:
+            None
+        """
         for node in reversed(path):
             v *= -1
             node.total_value += v

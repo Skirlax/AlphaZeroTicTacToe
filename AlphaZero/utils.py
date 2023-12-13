@@ -237,16 +237,16 @@ def visualize_tree(root_node, output_file_name: str, depth_limit: int | None = N
     if depth_limit is None:
         depth_limit = float("inf")
 
-    def make_graph(node, parent,g: pygraphviz.AGraph, d_limit: int):
+    def make_graph(node, parent, g: pygraphviz.AGraph, d_limit: int):
 
         state_ = None
         if node.state is None:
-            state_ = str(np.random.randint(low=0,high=5,size=parent.state.shape))
+            state_ = str(np.random.randint(low=0, high=5, size=parent.state.shape))
         else:
             state_ = str(node.state)
         g.add_node(state_)
         if parent != node:
-            g.add_edge(str(parent.state),state_)
+            g.add_edge(str(parent.state), state_)
         if not node.was_visited() or d_limit <= 0:
             return
         # queue_ = deque(root_node.children.values())
@@ -256,18 +256,19 @@ def visualize_tree(root_node, output_file_name: str, depth_limit: int | None = N
         # parent = root_node
 
         for child in node.children.values():
-            make_graph(child,node,g,d_limit=d_limit - 1 if depth_limit != float("inf") else depth_limit)
+            make_graph(child, node, g, d_limit=d_limit - 1 if depth_limit != float("inf") else depth_limit)
 
-    make_graph(root_node, root_node,graph, d_limit=depth_limit)
+    make_graph(root_node, root_node, graph, d_limit=depth_limit)
     graph.layout(prog="dot")
     graph.draw(f"{output_file_name}.png")
 
-def cpp_data_to_memory(data: list,memory:MemBuffer,args: DotDict):
+
+def cpp_data_to_memory(data: list, memory: MemBuffer, board_size: int):
     # import pickle
     # test_data = pickle.load(open(f"{find_project_root()}/history.pkl","rb"))
     for game_data in data:
         for state, pi, v in game_data:
-            state = th.tensor(state, dtype=th.float32).reshape(args["board_size"],args["board_size"])
+            state = th.tensor(state, dtype=th.float32).reshape(board_size, board_size)
             pi = th.tensor(pi, dtype=th.float32)
             memory.add((state, pi, v))
 
