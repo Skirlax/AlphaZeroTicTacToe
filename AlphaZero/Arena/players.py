@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import CpSelfPlay
 import numpy as np
 
 from AlphaZero.MCTS.search_tree import McSearchTree
@@ -47,6 +48,35 @@ class NetPlayer(Player):
         return self.game_manager.network_to_board(move)
 
 
+class TrainingNetPlayer(Player):
+    def __init__(self, network: TicTacToeNet, game_manager: GameManager, args: dict):
+        self.name = "TrainingNetPlayer"
+        self.args = self.__init_args(args)
+        self.network = network
+        self.game_manager = game_manager
+        self.traced_path = self.network.trace(self.args["board_size"])
+
+    def __init_args(self, args) -> dict:
+        for key in ["checkpoint_dir", "max_depth"]:
+            try:
+                args.pop(key)
+            except KeyError:
+                print(f"Key {key} not present.")
+        return args
+
+    def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
+        try:
+            current_player = kwargs["current_player"]
+            device = kwargs["device"]
+            tau = kwargs["tau"]
+        except KeyError:
+            raise KeyError("Missing keyword argument. Please supply kwargs: current_player, device, "
+                           "tau")
+        pi = CpSelfPlay.CmctsSearch(board, current_player, tau, self.args, self.traced_path)
+        move = self.game_manager.select_move(pi)
+        return self.game_manager.network_to_board(move)
+
+
 class HumanPlayer(Player):
     def __init__(self, game_manager: GameManager):
         self.name = "HumanPlayer"
@@ -77,7 +107,7 @@ class MinimaxPlayer(Player):
     def minimax(self, board: np.ndarray, depth: int, is_max: bool, player: int, alpha=-float("inf"),
                 beta=float("inf")) -> tuple:
         if depth == 0:
-            return self.evaluate_fn(board, -1), None
+            return self.evaluate_fn(board, player), None
 
         if is_max:
             best_score = -float("inf")

@@ -1,14 +1,14 @@
 import os
 
+os.environ['OMP_NUM_THREADS'] = '5'
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-
 from AlphaZero.Network.trainer import Trainer
 
 from AlphaZero.constants import SAMPLE_ARGS as args_
 from AlphaZero.constants import TRAINED_NET_ARGS as _args
-from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
+from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint,build_net_from_args
 import argparse
-from AlphaZero.Arena.players import NetPlayer, HumanPlayer, RandomPlayer, MinimaxPlayer
+from AlphaZero.Arena.players import NetPlayer, HumanPlayer, MinimaxPlayer
 from AlphaZero.MCTS.search_tree import McSearchTree
 from Game.game import GameManager
 from AlphaZero.Arena.arena import Arena
@@ -44,40 +44,53 @@ def main_alpha_zero():
     args.num_simulations = 1317
     args.self_play_games = 145
     args.epochs = 320
-    args.lr = 0.00032485504583772953
+    args.lr = 0.0032485504583772953
     # args.tau = 0.8243290871234756
     args.tau = 1.0
-    args.c = 1.7409658274805089
-    args.arena_tau = 0  # 0.04139160592420218
+    args.c = 1.15
+    args.arena_tau = 0.04139160592420218
     # args.arena_tau = args.tau
     # args.log_epsilon = 1.4165210108199043e-08
 
     args.num_iters = 50
 
+    # trainer = Trainer.create(args)
     trainer = Trainer.create(args)
     trainer.train()
     trainer.save_latest("Checkpoints/AlphaZero/latest.pth")
 
 
 def play():
-    args = DotDict(_args)
-    net = make_net_from_checkpoint("Nets/FinalNets/5x5_3/latest_trained_net.pth", args)
+    args = DotDict(args_)
+    # args.num_to_win = 3
+    # args.board_size = 5
+    # args.net_action_size = args.board_size ** 2
+    net = make_net_from_checkpoint("/home/skyr/Downloads/improved_net_1.pth", args)
     net.eval()
-    manager = GameManager(5, headless=False, num_to_win=3)
+    manager = GameManager(8, headless=False, num_to_win=5)
     search_tree = McSearchTree(manager, args)
+    # p1 = TrainingNetPlayer(net,manager,args)
     p1 = NetPlayer(net, search_tree, manager)
+    opp_data = th.load("/home/skyr/Downloads/temp_net_119.pth")
+    opp_net = build_net_from_args(args, th.device("cuda"))
+    opp_net.load_state_dict(opp_data)
+    manager2 = GameManager(8, headless=False, num_to_win=5)
+    search_tree2 = McSearchTree(manager2, args)
     # p1 = RandomPlayer(manager)
-    p2 = HumanPlayer(manager)
+    # p2 = HumanPlayer(manager)
+    p2 = NetPlayer(opp_net,search_tree2,manager2)
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager, args, device)
-    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
-                                            start_player=1)
+    net.eval()
+    opp_net.eval()
+    net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=False,
+                                            start_player=1,debug=True)
     print(f"Net wins: {net_wins}, Human wins: {human_wins}, Draws: {draws}")
 
 
 def human_minimax_play():
     args = DotDict(_args)
-    manager = GameManager(3, headless=False, num_to_win=3)
+    manager = GameManager(10, headless=False, num_to_win=5)
     p1 = HumanPlayer(manager)
     p2 = MinimaxPlayer(manager, evaluate_fn=manager.eval_board)
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -88,7 +101,7 @@ def human_minimax_play():
 
 if __name__ == "__main__":
     # human_minimax_play()
-    # play()
+    play()
     #
-    main_alpha_zero()
+    # main_alpha_zero()
     # main_alpha_zero_find_hyperparameters()

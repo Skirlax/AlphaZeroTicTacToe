@@ -1,6 +1,10 @@
+import glob
+import os
+
+import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-import torch as th
+import uuid
 
 
 class TicTacToeNet(nn.Module):
@@ -18,8 +22,8 @@ class TicTacToeNet(nn.Module):
         self.bn4 = nn.BatchNorm2d(num_channels)
 
         # Fully connected layers
-        # 4608 (5x5) or 512 (3x3) or 32768 (10x10)
-        self.fc1 = nn.Linear(32768, 1024)
+        # 4608 (5x5) or 512 (3x3) or 32768 (10x10) or 18432 (8x8)
+        self.fc1 = nn.Linear(18432, 1024)
         self.fc1_bn = nn.BatchNorm1d(1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc2_bn = nn.BatchNorm1d(512)
@@ -50,13 +54,26 @@ class TicTacToeNet(nn.Module):
 
         return pi, v
 
+    @th.no_grad()
     def predict(self, x):
         pi, v = self.forward(x)
         pi = th.exp(pi)
         return pi.detach().cpu().numpy(), v.detach().cpu().numpy()
 
-    def to_traced_script(self):
-        return th.jit.trace(self, th.rand(1, 10, 10).cuda())
+    def to_traced_script(self, board_size: int = 10):
+        return th.jit.trace(self, th.rand(1, board_size, board_size).cuda())
+
+    def trace(self, board_size: int) -> str:
+        from AlphaZero.utils import find_project_root
+        traced = self.to_traced_script(board_size=board_size)
+        path = f"{find_project_root()}/Checkpoints/Traces/traced{uuid.uuid4()}.pt"
+        traced.save(path)
+        return path
+
+    def __del__(self):
+        from AlphaZero.utils import find_project_root
+        for trace_file in glob.glob(f"{find_project_root()}/Checkpoints/Traces/*.pt"):
+            os.remove(trace_file)
 
 
 class TicTacToeNetNoNorm(nn.Module):

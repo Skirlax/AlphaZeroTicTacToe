@@ -16,5 +16,6 @@ mysqlclient
 mysql-connector-python
 joblib
 dill
+ipython
 # manimgl
 # pygraphviz

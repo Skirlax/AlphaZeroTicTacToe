@@ -21,7 +21,6 @@ from mem_buffer import MemBuffer
 
 joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
 from multiprocessing import set_start_method
-import pickle
 
 set_start_method('spawn', force=True)
 
@@ -120,12 +119,14 @@ class Trainer:
         self.network.eval()
 
         for i in self.make_tqdm_bar(range(num_iters), "Training Progress", 0):
+            if i >= self.args["zero_tau_after"]:
+                self.args["arena_tau"] = 0
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
                 args_ = self.args.copy()
                 args_.pop("max_depth")
                 args_.pop("checkpoint_dir")
-                traced = self.network.to_traced_script()
+                traced = self.network.to_traced_script(board_size=self.args["board_size"])
                 traced_save_path = "traced.pt"
                 traced.save(traced_save_path)
                 history, wins_p1, wins_p2, game_draws = CpSelfPlay.CparallelSelfPlay(self.args["num_workers"],
@@ -177,7 +178,7 @@ class Trainer:
             num_games = self.args["num_pit_games"]
             update_threshold = self.args["update_threshold"]
             self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, p2.name, num_games))
-            p1_wins, p2_wins, draws = self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
+            p1_wins, p2_wins, draws = self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations,one_player=False)
             self.logger.log(LoggingMessageTemplates.PITTING_END(p1.name, p2.name, p1_wins,
                                                                 p2_wins, draws))
             self.arena_win_frequencies.append(p1_wins / num_games)

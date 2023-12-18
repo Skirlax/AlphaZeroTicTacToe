@@ -1,6 +1,6 @@
 # File for storing constants
 
-board_size = 10
+board_size = 8
 
 SAMPLE_ARGS = {
     "num_net_channels": 512,
@@ -24,9 +24,10 @@ SAMPLE_ARGS = {
     "update_threshold": 0.6,
     "max_depth": float("inf"),
     "show_tqdm": True,
-    "num_workers": 5,
+    "num_workers": 1,
     "num_to_win": 5,
     "log_epsilon": 1e-9,
+    "zero_tau_after": 3
 }
 
 

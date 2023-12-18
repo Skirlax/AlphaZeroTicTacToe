@@ -1,5 +1,5 @@
 import os
-
+import shutil
 import torch as th
 
 from AlphaZero.utils import find_project_root, DotDict
@@ -55,7 +55,7 @@ class CheckPointer:
         return checkpoint["net"], checkpoint["optimizer"], checkpoint["memory"], checkpoint["lr"]
 
     def load_checkpoint_from_num(self, checkpoint_num: int) -> tuple:
-        checkpoint_path = f"{self.__checkpoint_dir}/{self.__name_prefix}{checkpoint_num}"
+        checkpoint_path = f"{self.__checkpoint_dir}/{self.__name_prefix}{checkpoint_num}.pth"
         return self.load_checkpoint_from_path(checkpoint_path)
 
     def clear_checkpoints(self) -> None:
@@ -106,5 +106,4 @@ class CheckPointer:
             print(msg)
 
     def __del__(self) -> None:
-        pass
-        # shutil.rmtree(f"{self.__checkpoint_dir}/Temp/", ignore_errors=True)
+        shutil.rmtree(f"{self.__checkpoint_dir}/Temp/", ignore_errors=True)

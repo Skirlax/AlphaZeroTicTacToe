@@ -84,23 +84,12 @@ class GameManager:
         # results.append(func(np.fliplr(arr).diagonal().reshape(-1)))
         return results
 
-    def eval_board(self, board: np.ndarray, player: int):
+    def eval_board(self, board: np.ndarray, player: int) -> int:
         score = 0
-        players = [player, -player]
-        for i in range(self.num_to_win, 1, -1):
-            for plr in players:
-                win_dict = self.check_partial_win_to_index(plr, i, board=board)
-                if win_dict["index"] is None or win_dict["pos"] is None:
-                    continue
-                win_idx = win_dict["index"]
-                pos = win_dict["pos"]
-                # []
-                is_next = [board[self.get_next(win_idx, pos, i)] == pl for pl, i in
-                           zip([plr] * (i - 1) + [0], range(1, i + 1))]
-                if board[self.get_previous(win_idx, pos, 1)] == 0 or np.all(is_next):
-                    None
-                    score += i * 10 * -plr
-
+        for i in range(self.num_to_win // 2,self.num_to_win + 1):
+            match_ = self.check_partial_win(player, i, board=board)
+            if match_:
+                score += i ** 2
         return score
 
     def full_iterate_array_all_diags(self, arr: np.ndarray, func: callable):
