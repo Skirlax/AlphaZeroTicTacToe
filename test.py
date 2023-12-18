@@ -2,7 +2,7 @@ import CpSelfPlay
 import numpy as np
 import torch as th
 from AlphaZero.MCTS.search_tree import McSearchTree
-from AlphaZero.utils import DotDict,build_net_from_args
+from AlphaZero.utils import DotDict, build_net_from_args
 from AlphaZero.constants import SAMPLE_ARGS as _args
 from Game.game import GameManager
 
@@ -26,9 +26,10 @@ res = CpSelfPlay.CmctsSearch(state, 1, sample_args["tau"], sample_args,
                              "/home/skyr/PycharmProjects/AlphaZeroTicTacToe/traced.pt")
 print(res)
 
-network = build_net_from_args(sample_args,th.device("cuda"))
+network = build_net_from_args(sample_args, th.device("cuda"))
 network.eval()
 
-tree = McSearchTree(GameManager(10, headless=True, num_to_win=5), DotDict(sample_args))
-res = tree.search(network,state,1,th.device("cuda"))
+tree = McSearchTree(GameManager(10, headless=True,
+                    num_to_win=5), DotDict(sample_args))
+res = tree.search(network, state, 1, th.device("cuda"))
 print(res)
