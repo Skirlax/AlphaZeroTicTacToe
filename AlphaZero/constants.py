@@ -47,7 +47,7 @@ TRAINED_NET_ARGS = {
     "board_size": board_size,
     "batch_size": 128,
     "tau": 1.0,
-    "arena_tau": 0, # 0.04139160592420218
+    "arena_tau": 0,  # 0.04139160592420218
     "c": 1.7409658274805089,
     "checkpoint_dir": None,
     "update_threshold": 0.6,
