@@ -65,26 +65,26 @@ def play():
     # args.num_to_win = 3
     # args.board_size = 5
     # args.net_action_size = args.board_size ** 2
-    net = make_net_from_checkpoint("/home/skyr/Downloads/improved_net_1.pth", args)
+    net = make_net_from_checkpoint("/home/skyr/PycharmProjects/AlphaZeroTicTacToe/Nets/8x8_test/improved_net_7.pth", args)
     net.eval()
     manager = GameManager(8, headless=False, num_to_win=5)
     search_tree = McSearchTree(manager, args)
     # p1 = TrainingNetPlayer(net,manager,args)
     p1 = NetPlayer(net, search_tree, manager)
-    opp_data = th.load("/home/skyr/Downloads/temp_net_119.pth")
-    opp_net = build_net_from_args(args, th.device("cuda"))
-    opp_net.load_state_dict(opp_data)
+    # opp_data = th.load("/home/skyr/Downloads/temp_net_119.pth")
+    # opp_net = build_net_from_args(args, th.device("cuda"))
+    # opp_net.load_state_dict(opp_data)
     manager2 = GameManager(8, headless=False, num_to_win=5)
     search_tree2 = McSearchTree(manager2, args)
     # p1 = RandomPlayer(manager)
-    # p2 = HumanPlayer(manager)
-    p2 = NetPlayer(opp_net,search_tree2,manager2)
+    p2 = HumanPlayer(manager)
+    # p2 = NetPlayer(opp_net,search_tree2,manager2)
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager, args, device)
     net.eval()
-    opp_net.eval()
+    # opp_net.eval()
     net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=False,
-                                            start_player=1,debug=True)
+                                            start_player=1,debug=False)
     print(f"Net wins: {net_wins}, Human wins: {human_wins}, Draws: {draws}")
 
 

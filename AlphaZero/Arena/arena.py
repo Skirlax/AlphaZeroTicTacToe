@@ -3,7 +3,6 @@ from typing import Type
 from AlphaZero.Arena.players import Player
 from AlphaZero.utils import DotDict
 from Game.game import GameManager
-import time
 
 
 class Arena:
@@ -14,7 +13,7 @@ class Arena:
 
     def pit(self, player1: Type[Player], player2: Type[Player],
             num_games_to_play: int, num_mc_simulations: int, one_player: bool = False,
-            start_player: int = 1,add_to_kwargs: dict or None = None,debug: bool = False) -> tuple[int, int, int]:
+            start_player: int = 1, add_to_kwargs: dict or None = None, debug: bool = False) -> tuple[int, int, int]:
         """
         Pit two players against each other for a given number of games and gather the results.
         :param start_player: Which player should start the game.
@@ -63,18 +62,18 @@ class Arena:
                     if status == 1:
                         if current_player == 1:
                             results["wins_p1"] += 1
-                            print("Player 1 wins.")
+                            # print("Player 1 wins.")
                         else:
                             results["wins_p2"] += 1
-                            print("Player 2 wins.")
+                            # print("Player 2 wins.")
 
                     elif status == -1:
                         if current_player == 1:
                             results["wins_p2"] += 1
-                            print("Player 2 wins.")
+                            # print("Player 2 wins.")
                         else:
                             results["wins_p1"] += 1
-                            print("Player 1 wins.")
+                            # print("Player 1 wins.")
                     else:
                         results["draws"] += 1
 
@@ -87,12 +86,6 @@ class Arena:
 
         return results["wins_p1"], results["wins_p2"], results["draws"]
 
-
-
     def wait_keypress(self):
         inpt = input("Press any key to continue...")
         return inpt
-
-
-
-
