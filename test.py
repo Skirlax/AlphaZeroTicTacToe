@@ -4,7 +4,7 @@ import torch as th
 from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.utils import DotDict,build_net_from_args
 from AlphaZero.constants import SAMPLE_ARGS as _args
-from Game.game import GameManager
+from Game.tictactoe_game import TicTacToeGameManager
 
 state = np.zeros((10, 10))
 # sample_args = {
@@ -29,6 +29,6 @@ print(res)
 network = build_net_from_args(sample_args,th.device("cuda"))
 network.eval()
 
-tree = McSearchTree(GameManager(10, headless=True, num_to_win=5), DotDict(sample_args))
+tree = McSearchTree(TicTacToeGameManager(10, headless=True, num_to_win=5), DotDict(sample_args))
 res = tree.search(network,state,1,th.device("cuda"))
 print(res)

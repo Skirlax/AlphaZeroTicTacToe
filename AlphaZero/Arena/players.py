@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
 
-import CpSelfPlay
+# import CpSelfPlay
 import numpy as np
 
 from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
-from Game.game import GameManager
+from Game.tictactoe_game import TicTacToeGameManager
 
 
 class Player(ABC):
+    """
+    To create a custom player, extend this class and implement the choose_move method.
+    You can see different implementations below.
+    """
 
     @abstractmethod
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
@@ -16,9 +20,9 @@ class Player(ABC):
 
 
 class RandomPlayer(Player):
-    def __init__(self, game_manager: GameManager):
+    def __init__(self, game_manager: TicTacToeGameManager):
         self.game_manager = game_manager
-        self.name = "RandomPlayer"
+        self.name = self.__class__.__name__
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         move = self.game_manager.get_random_valid_action(board)
@@ -26,11 +30,11 @@ class RandomPlayer(Player):
 
 
 class NetPlayer(Player):
-    def __init__(self, network: TicTacToeNet, mc_tree_search: McSearchTree, game_manager: GameManager):
+    def __init__(self, network: TicTacToeNet, mc_tree_search: McSearchTree, game_manager: TicTacToeGameManager):
         self.game_manager = game_manager
         self.network = network
         self.monte_carlo_tree_search = mc_tree_search
-        self.name = "NetworkPlayer"
+        self.name = self.__class__.__name__
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         try:
@@ -49,8 +53,8 @@ class NetPlayer(Player):
 
 
 class TrainingNetPlayer(Player):
-    def __init__(self, network: TicTacToeNet, game_manager: GameManager, args: dict):
-        self.name = "TrainingNetPlayer"
+    def __init__(self, network: TicTacToeNet, game_manager: TicTacToeGameManager, args: dict):
+        self.name = self.__class__.__name__
         self.args = self.__init_args(args)
         self.network = network
         self.game_manager = game_manager
@@ -78,8 +82,8 @@ class TrainingNetPlayer(Player):
 
 
 class HumanPlayer(Player):
-    def __init__(self, game_manager: GameManager):
-        self.name = "HumanPlayer"
+    def __init__(self, game_manager: TicTacToeGameManager):
+        self.name = self.__class__.__name__
         self.game_manager = game_manager
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
@@ -90,10 +94,10 @@ class HumanPlayer(Player):
 
 
 class MinimaxPlayer(Player):
-    def __init__(self, game_manager: GameManager, evaluate_fn: callable):
+    def __init__(self, game_manager: TicTacToeGameManager, evaluate_fn: callable):
         self.evaluate_fn = evaluate_fn
         self.game_manager = game_manager
-        self.name = "MinimaxPlayer"
+        self.name = self.__class__.__name__
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         try:
@@ -112,7 +116,7 @@ class MinimaxPlayer(Player):
         if is_max:
             best_score = -float("inf")
             best_move = None
-            for move in self.game_manager.get_legal_moves_on_observation(board):
+            for move in self.game_manager.get_valid_moves(board):
                 board[move[0]][move[1]] = player
                 score = self.minimax(board.copy(), depth - 1, False, -player, alpha, beta)[0]
                 if score > best_score:
@@ -127,7 +131,7 @@ class MinimaxPlayer(Player):
         else:
             best_score = float("inf")
             best_move = None
-            for move in self.game_manager.get_legal_moves_on_observation(board):
+            for move in self.game_manager.get_valid_moves(board):
                 board[move[0]][move[1]] = player
                 score = self.minimax(board.copy(), depth - 1, True, -player, alpha, beta)[0]
                 if score < best_score:

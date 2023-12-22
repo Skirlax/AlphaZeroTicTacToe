@@ -2,12 +2,12 @@ from typing import Type
 
 from AlphaZero.Arena.players import Player
 from AlphaZero.utils import DotDict
-from Game.game import GameManager
+from Game.tictactoe_game import TicTacToeGameManager
 import time
 
 
 class Arena:
-    def __init__(self, game_manager: GameManager, args: DotDict, device):
+    def __init__(self, game_manager: TicTacToeGameManager, args: DotDict, device):
         self.game_manager = game_manager
         self.device = device
         self.args = args

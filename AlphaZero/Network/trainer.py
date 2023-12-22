@@ -1,4 +1,4 @@
-import CpSelfPlay
+# import CpSelfPlay
 from copy import deepcopy
 
 import joblib
@@ -16,7 +16,7 @@ from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
 from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args, \
     upload_checkpoint_to_gdrive,cpp_data_to_memory
-from Game.game import GameManager
+from Game.tictactoe_game import TicTacToeGameManager
 from mem_buffer import MemBuffer
 
 joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
@@ -34,8 +34,8 @@ class Trainer:
         self.args = args
         self.device = device
         self.headless = headless
-        self.game_manager = GameManager(board_size=self.args.board_size, headless=headless,
-                                        num_to_win=self.args.num_to_win)
+        self.game_manager = TicTacToeGameManager(board_size=self.args.board_size, headless=headless,
+                                                 num_to_win=self.args.num_to_win)
         self.mcts = McSearchTree(self.game_manager, self.args)
         self.network = network
         self.opponent_network = build_net_from_args(args, device)
@@ -169,8 +169,8 @@ class Trainer:
             self.logger.log(LoggingMessageTemplates.LOADED("opponent network", self.checkpointer.get_temp_path()))
             self.network.eval()
             self.opponent_network.eval()
-            p1_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
-            p2_game_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p1_game_manager = TicTacToeGameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p2_game_manager = TicTacToeGameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_game_manager, self.args)
             p2_tree = McSearchTree(p2_game_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_game_manager)
@@ -237,9 +237,9 @@ class Trainer:
 
     def only_pit(self, p1: Player, p2: Player, num_games: int):
         if p1 == NetPlayer and p2 == NetPlayer:
-            p1_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p1_manager = TicTacToeGameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p1_tree = McSearchTree(p1_manager, self.args)
-            p2_manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            p2_manager = TicTacToeGameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             p2_tree = McSearchTree(p2_manager, self.args)
             p1 = NetPlayer(self.network, p1_tree, p1_manager)
             p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
@@ -292,7 +292,7 @@ class Trainer:
         """
         trees = []
         for i in range(n):
-            manager = GameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
+            manager = TicTacToeGameManager(self.args["board_size"], self.headless, num_to_win=self.args.num_to_win)
             trees.append(McSearchTree(manager, dict(self.args)))
         return trees
 

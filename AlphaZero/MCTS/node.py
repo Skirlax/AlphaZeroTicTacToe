@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from Game.game import GameManager
+from Game.tictactoe_game import TicTacToeGameManager
 
 
 class Node:
@@ -104,4 +104,4 @@ class Node:
         # action_probs[random_idx + 1] = rem
         # print(sum(action_probs.values()))
 
-        return GameManager.adjust_probabilities(action_probs, tau=tau)
+        return TicTacToeGameManager.adjust_probabilities(action_probs, tau=tau)
