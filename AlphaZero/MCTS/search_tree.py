@@ -11,7 +11,7 @@ class McSearchTree:
         self.args = args
         self.root_node = None
 
-    def play_one_game(self, network, device) -> tuple[list, int, int, int]:
+    def play_one_game(self, network: th.nn.Module, device: th.device) -> tuple[list, int, int, int]:
         """
         Plays a single game using the Monte Carlo Tree Search algorithm.
 

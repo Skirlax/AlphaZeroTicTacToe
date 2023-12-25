@@ -56,7 +56,7 @@ class Node:
             action_ = np.unravel_index(action, self.state.shape)
             if valids_for_state[action_] != 1:
                 continue
-            child_utc = child.calculate_utc(c=c)
+            child_utc = child.calculate_utc_score(c=c)
             utcs.append(child_utc)
             if child_utc > best_utc:
                 best_utc = child_utc

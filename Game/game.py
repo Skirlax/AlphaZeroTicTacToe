@@ -106,6 +106,13 @@ class Game(ABC):
         """
         pass
 
+    @abstractmethod
+    def reset(self):
+        """
+        Resets the game and returns the initial board.
+        """
+        pass
+
     def eval_board(self, board: np.ndarray, player: int):
         """
         Optional. Evaluates the board from the perspective of the given player.

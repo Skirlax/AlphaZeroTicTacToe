@@ -1,6 +1,7 @@
 import random
 from collections import deque
 
+import torch as th
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -51,3 +52,23 @@ class MemBuffer:
 
     def to_dataloader(self, batch_size):
         return DataLoader(MemDataset(self.buffer), batch_size=batch_size, shuffle=True, collate_fn=lambda x: x)
+
+
+class MuZeroFrameBuffer:
+    def __init__(self, frame_buffer_size, noop_action: int):
+        self.max_size = frame_buffer_size
+        self.noop_action = noop_action
+        self.buffer = deque(maxlen=frame_buffer_size)
+
+    def add_frame(self, frame, action):
+        self.buffer.append((frame, action))
+
+    def concat_frames(self):
+        frames_with_actions = [th.cat((th.tensor(frame, dtype=th.float32),
+                                       th.full((frame.shape[0], frame.shape[1], 1), action, dtype=th.float32)), dim=2)
+                               for frame, action in self.buffer]
+        return th.stack(frames_with_actions, dim=2)
+
+    def init_buffer(self, init_state):
+        for _ in range(self.max_size):
+            self.add_frame(init_state, self.noop_action)
