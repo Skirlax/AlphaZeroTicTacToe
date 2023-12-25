@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 
-from Game.tictactoe_game import TicTacToeGameManager
+from Game.tictactoe_game import TicTacToeGameManager as GameManager
 
 
 class Node:
@@ -88,7 +88,7 @@ class Node:
         # Not important for the algorithm, but might be useful for debugging.
         return self.total_value / self.times_visited if self.times_visited > 0 else 0
 
-    def get_self_action_probabilities(self, tau=1.0):
+    def get_self_action_probabilities(self, tau=1.0,adjust=True):
         total_times_visited = self.times_visited
         action_probs = {}
         # action_probs = dict.fromkeys(self.children.keys(), 0)
@@ -104,4 +104,8 @@ class Node:
         # action_probs[random_idx + 1] = rem
         # print(sum(action_probs.values()))
 
-        return TicTacToeGameManager.adjust_probabilities(action_probs, tau=tau)
+        # print(action_probs)
+        if adjust:
+            return GameManager.adjust_probabilities(action_probs, tau=tau)
+        else:
+            return action_probs

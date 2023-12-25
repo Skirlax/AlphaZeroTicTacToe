@@ -1,4 +1,4 @@
-import CpSelfPlay
+# import CpSelfPlay
 import numpy as np
 import torch as th
 from AlphaZero.MCTS.search_tree import McSearchTree

@@ -4,7 +4,6 @@ import os
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
-import uuid
 
 
 class TicTacToeNet(nn.Module):
@@ -64,9 +63,8 @@ class TicTacToeNet(nn.Module):
         return th.jit.trace(self, th.rand(1, board_size, board_size).cuda())
 
     def trace(self, board_size: int) -> str:
-        from AlphaZero.utils import find_project_root
         traced = self.to_traced_script(board_size=board_size)
-        path = f"{find_project_root()}/Checkpoints/Traces/traced{uuid.uuid4()}.pt"
+        path = "traced.pt"
         traced.save(path)
         return path
 

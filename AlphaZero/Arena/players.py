@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 # import CpSelfPlay
 import numpy as np
 
-from AlphaZero.MCTS.search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
+from Game.game import Game
 from Game.tictactoe_game import TicTacToeGameManager
 
 
@@ -15,14 +15,23 @@ class Player(ABC):
     """
 
     @abstractmethod
+    def __init__(self, game_manager: Game, **kwargs):
+        pass
+
+    @abstractmethod
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         pass
 
+    def init_kwargs(self, kwargs: dict):
+        for key in kwargs.keys():
+            setattr(self, key, kwargs[key])
+
 
 class RandomPlayer(Player):
-    def __init__(self, game_manager: TicTacToeGameManager):
+    def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         self.game_manager = game_manager
         self.name = self.__class__.__name__
+        self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         move = self.game_manager.get_random_valid_action(board)
@@ -30,11 +39,12 @@ class RandomPlayer(Player):
 
 
 class NetPlayer(Player):
-    def __init__(self, network: TicTacToeNet, mc_tree_search: McSearchTree, game_manager: TicTacToeGameManager):
+    def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         self.game_manager = game_manager
-        self.network = network
-        self.monte_carlo_tree_search = mc_tree_search
+        # self.network = network
+        # self.monte_carlo_tree_search = mc_tree_search
         self.name = self.__class__.__name__
+        self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         try:
@@ -47,6 +57,7 @@ class NetPlayer(Player):
 
         pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device, tau=tau)
         move = self.game_manager.select_move(pi)
+        print(self.game_manager.network_to_board(move))
         # visualize_tree(self.monte_carlo_tree_search.root_node, output_file_name="tree_viz",depth_limit=2)
         self.monte_carlo_tree_search.step_root(None)
         return self.game_manager.network_to_board(move)
@@ -54,6 +65,7 @@ class NetPlayer(Player):
 
 class TrainingNetPlayer(Player):
     def __init__(self, network: TicTacToeNet, game_manager: TicTacToeGameManager, args: dict):
+        raise NotImplementedError("Don't use this class yet, it produces incorrect results.")
         self.name = self.__class__.__name__
         self.args = self.__init_args(args)
         self.network = network
@@ -82,9 +94,10 @@ class TrainingNetPlayer(Player):
 
 
 class HumanPlayer(Player):
-    def __init__(self, game_manager: TicTacToeGameManager):
+    def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         self.name = self.__class__.__name__
         self.game_manager = game_manager
+        self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         if self.game_manager.headless:
@@ -94,10 +107,11 @@ class HumanPlayer(Player):
 
 
 class MinimaxPlayer(Player):
-    def __init__(self, game_manager: TicTacToeGameManager, evaluate_fn: callable):
-        self.evaluate_fn = evaluate_fn
+    def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
+        # self.evaluate_fn = evaluate_fn
         self.game_manager = game_manager
         self.name = self.__class__.__name__
+        self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         try:
@@ -110,6 +124,7 @@ class MinimaxPlayer(Player):
 
     def minimax(self, board: np.ndarray, depth: int, is_max: bool, player: int, alpha=-float("inf"),
                 beta=float("inf")) -> tuple:
+        self.game_manager.check_pg_events()
         if depth == 0:
             return self.evaluate_fn(board, player), None
 
@@ -127,7 +142,7 @@ class MinimaxPlayer(Player):
                 if alpha >= beta:
                     break
                 board[move[0]][move[1]] = 0
-            return best_score if best_score != -float("inf") else self.evaluate_fn(board, player), best_move
+            return best_score , best_move
         else:
             best_score = float("inf")
             best_move = None
@@ -142,4 +157,4 @@ class MinimaxPlayer(Player):
                 if beta <= alpha:
                     break
                 board[move[0]][move[1]] = 0
-            return best_score if best_score != float("inf") else self.evaluate_fn(board, player), best_move
+            return best_score , best_move

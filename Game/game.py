@@ -4,7 +4,6 @@ import numpy as np
 
 
 class Game(ABC):
-
     """
     Make your custom game extend this class and implement all the methods.
     """
@@ -52,6 +51,13 @@ class Game(ABC):
     def select_move(action_probs: dict):
         moves, probs = zip(*action_probs.items())
         return np.random.choice(moves, p=probs)
+
+    @abstractmethod
+    def make_fresh_instance(self):
+        """
+        Returns a fresh instance of the game (not a copy).
+        """
+        pass
 
     @abstractmethod
     def check_win(self, player: int, board: np.ndarray) -> bool:

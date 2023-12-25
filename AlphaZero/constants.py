@@ -24,12 +24,11 @@ SAMPLE_ARGS = {
     "update_threshold": 0.6,
     "max_depth": float("inf"),
     "show_tqdm": True,
-    "num_workers": 1,
+    "num_workers": 15,
     "num_to_win": 5,
     "log_epsilon": 1e-9,
-    "zero_tau_after": 3
+    "zero_tau_after": 5
 }
-
 
 TRAINED_NET_ARGS = {
     "num_net_channels": 512,
@@ -40,15 +39,15 @@ TRAINED_NET_ARGS = {
     "self_play_games": 145,
     "num_iters": 50,
     "epochs": 320,
-    "lr": 0.00032485504583772953,
+    "lr": 0.0032485504583772953,
     "max_buffer_size": 100_000,
     "num_pit_games": 40,
     "random_pit_freq": 3,
     "board_size": board_size,
     "batch_size": 128,
     "tau": 1.0,
-    "arena_tau": 0, # 0.04139160592420218
-    "c": 1.7409658274805089,
+    "arena_tau": 0,  # 0.04139160592420218
+    "c": 1.15,
     "checkpoint_dir": None,
     "update_threshold": 0.6,
     "max_depth": float("inf"),

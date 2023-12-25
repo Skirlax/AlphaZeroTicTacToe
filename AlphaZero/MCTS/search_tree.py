@@ -1,5 +1,3 @@
-import datetime
-
 import torch as th
 
 from AlphaZero.MCTS.node import Node
@@ -83,7 +81,7 @@ class McSearchTree:
         state_ = th.tensor(state_, dtype=th.float32, device=device).unsqueeze(0)
         probabilities, v = network.predict(state_)
 
-        probabilities = mask_invalid_actions(probabilities, state, self.game_manager.board_size)
+        probabilities = mask_invalid_actions(probabilities, state.copy(), self.game_manager.board_size)
         probabilities = probabilities.flatten().tolist()
         self.root_node.expand(state, probabilities)
         for simulation in range(num_simulations):
@@ -104,18 +102,6 @@ class McSearchTree:
                                                           current_node.parent.current_player)
             next_state_ = self.game_manager.get_canonical_form(next_state, current_node.current_player)
             v = self.game_manager.game_result(current_node.current_player, next_state)
-            # if v is None and (
-            #         self.game_manager.check_partial_win(1, self.args["num_to_win"],
-            #                                             board=next_state) or self.game_manager.check_partial_win(
-            #     -1, self.args["num_to_win"], board=next_state)):
-            #     print(f"Partial win found, but not detected by game_result."
-            #           f"At [{datetime.datetime.now()}]. Adding possibly important info:\n"
-            #           f"Current node player: {current_node.current_player}\n"
-            #           f"Next state: {next_state}\n",
-            #
-            #           file=open("win_info.txt", "a+"))
-            #     raise ValueError("Partial win found, but not detected by game_result.")
-            # None
             if v is None:
                 # next_state_ = make_channels_from_single(next_state_)
                 next_state_ = th.tensor(next_state_, dtype=th.float32, device=device).unsqueeze(0)
@@ -127,7 +113,7 @@ class McSearchTree:
 
             self.backprop(v, path)
 
-        return self.root_node.get_self_action_probabilities(tau=tau), self.root_node.get_self_value()
+        return self.root_node.get_self_action_probabilities(tau=tau), None
 
     def backprop(self, v, path):
         """

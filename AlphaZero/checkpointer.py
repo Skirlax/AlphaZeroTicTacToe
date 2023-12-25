@@ -1,5 +1,6 @@
 import os
 import shutil
+
 import torch as th
 
 from AlphaZero.utils import find_project_root, DotDict
@@ -22,7 +23,8 @@ class CheckPointer:
         self.__checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
 
-    def save_checkpoint(self, net, optimizer: th.optim, memory: MemBuffer, lr: float,
+    def save_checkpoint(self, net: th.nn.Module, opponent: th.nn.Module, optimizer: th.optim, memory: MemBuffer,
+                        lr: float,
                         iteration: int, args: DotDict, name: str = None) -> None:
         if name is None:
             name = self.__name_prefix + str(self.__checkpoint_num)
@@ -34,7 +36,8 @@ class CheckPointer:
             "memory": memory,
             "lr": lr,
             "iteration": iteration,
-            "args": dict(args)
+            "args": dict(args),
+            'opponent_state_dict': opponent.state_dict()
         }, checkpoint_path)
         self.print_verbose(f"Saved checkpoint to {checkpoint_path} at iteration {iteration}.")
         self.__checkpoint_num += 1
@@ -52,7 +55,8 @@ class CheckPointer:
     def load_checkpoint_from_path(self, checkpoint_path: str) -> tuple:
         checkpoint = th.load(checkpoint_path)
         self.print_verbose(f"Restoring checkpoint {checkpoint_path} made at iteration {checkpoint['iteration']}.")
-        return checkpoint["net"], checkpoint["optimizer"], checkpoint["memory"], checkpoint["lr"]
+        return checkpoint["net"], checkpoint["optimizer"], checkpoint["memory"], checkpoint["lr"], \
+            DotDict(checkpoint["args"]), checkpoint["opponent_state_dict"]
 
     def load_checkpoint_from_num(self, checkpoint_num: int) -> tuple:
         checkpoint_path = f"{self.__checkpoint_dir}/{self.__name_prefix}{checkpoint_num}.pth"

@@ -1,9 +1,15 @@
+import io
 import random
 import sys
-from Game.game import Game
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pygame as pg
+import seaborn as sns
 import torch as th
+from PIL import Image
+
+from Game.game import Game
 
 
 class TicTacToeGameManager(Game):
@@ -224,6 +230,9 @@ class TicTacToeGameManager(Game):
             return return_on_fail
         return index
 
+    def make_fresh_instance(self):
+        return TicTacToeGameManager(self.board_size, self.headless, num_to_win=self.num_to_win)
+
     def get_previous(self, index: tuple, pos: str, n: int):
         if np.array(index).all() == 0:
             return index
@@ -279,8 +288,8 @@ class TicTacToeGameManager(Game):
                 elif self.board[row][col] == self.enemy_player:
                     self._draw_cross(col * 100 + 50, row * 100 + 50)
 
-        pg.event.pump()
-        pg.display.update()
+        # pg.event.pump()
+        pg.display.flip()
         return True
 
     def _draw_circle(self, x, y) -> None:
@@ -334,16 +343,21 @@ class TicTacToeGameManager(Game):
         if self.headless:
             return
         while True:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    self.pygame_quit()
-                    sys.exit(0)
+            self.check_pg_events()
             if self.get_click_coords() is not None:
                 x, y = self.get_click_coords()
                 if board[y][x] == 0:
                     return y, x
 
             # time.sleep(1 / 60)
+
+    def check_pg_events(self):
+        if self.headless:
+            return
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                self.pygame_quit()
+                sys.exit(0)
 
     def network_to_board(self, move):
         """
@@ -352,6 +366,36 @@ class TicTacToeGameManager(Game):
         :return: A tuple representing the board index (int,int).
         """
         return np.unravel_index(move, self.board.shape)
+
+    def save_screenshot_with_probabilities(self, action_probs, path):
+        if self.headless:
+            return
+        plt.figure(figsize=(15, 10))
+        labels, probabilities = zip(*action_probs.items())
+        print(probabilities)
+        labels = [f"{np.unravel_index(x, self.board.shape)[0]};{np.unravel_index(x, self.board.shape)[1]}" for x in
+                  labels]
+        sns.barplot(x=labels, y=probabilities)
+        plt.xticks(rotation=90)
+        plt.xlabel("Move")
+        plt.ylabel("Probability")
+        plt.title("Action probabilities")
+        # Save the plot to a buffer
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches="tight")
+        buf.seek(0)
+        plot_img = Image.open(buf)
+
+        # Convert the pg surface to an image
+        surface_buffer = pg.image.tostring(self.screen, 'RGBA')
+        surface_img = Image.frombytes('RGBA', self.screen.get_size(), surface_buffer)
+
+        # Concatenate the images vertically
+        total_height = plot_img.height + surface_img.height
+        combined_img = Image.new('RGB', (max(plot_img.width, surface_img.width), total_height))
+        combined_img.paste(plot_img, (0, 0))
+        combined_img.paste(surface_img, (0, plot_img.height))
+        combined_img.save(path)
 
     @staticmethod
     def get_canonical_form(board, player) -> np.ndarray:
@@ -362,6 +406,9 @@ class TicTacToeGameManager(Game):
         board_ = board.copy()
         board_[board_index] = player
         return board_
+
+    def set_headless(self, val: bool):
+        self.headless = val
 
     def __str__(self):
         return str(self.board).replace('1', 'X').replace('-1', 'O')
