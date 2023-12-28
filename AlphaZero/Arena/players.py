@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from AlphaZero.Network.nnet import TicTacToeNet
-from Game.game import Game
 from Game.tictactoe_game import TicTacToeGameManager
+from General.az_game import Game
 
 
 class Player(ABC):
@@ -22,6 +22,10 @@ class Player(ABC):
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         pass
 
+    @abstractmethod
+    def make_fresh_instance(self):
+        pass
+
     def init_kwargs(self, kwargs: dict):
         for key in kwargs.keys():
             setattr(self, key, kwargs[key])
@@ -31,11 +35,15 @@ class RandomPlayer(Player):
     def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         self.game_manager = game_manager
         self.name = self.__class__.__name__
+        self.kwargs = kwargs
         self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         move = self.game_manager.get_random_valid_action(board)
         return tuple(move)
+
+    def make_fresh_instance(self):
+        return RandomPlayer(self.game_manager.make_fresh_instance(), **self.kwargs)
 
 
 class NetPlayer(Player):
@@ -44,6 +52,7 @@ class NetPlayer(Player):
         # self.network = network
         # self.monte_carlo_tree_search = mc_tree_search
         self.name = self.__class__.__name__
+        self.kwargs = kwargs
         self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
@@ -57,10 +66,17 @@ class NetPlayer(Player):
 
         pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device, tau=tau)
         move = self.game_manager.select_move(pi)
-        print(self.game_manager.network_to_board(move))
+        # print(self.game_manager.network_to_board(move))
         # visualize_tree(self.monte_carlo_tree_search.root_node, output_file_name="tree_viz",depth_limit=2)
         self.monte_carlo_tree_search.step_root(None)
         return self.game_manager.network_to_board(move)
+
+    def make_fresh_instance(self):
+        return NetPlayer(self.game_manager.make_fresh_instance(), **{"network": self.network,
+                                                                     "monte_carlo_tree_search": self.monte_carlo_tree_search.make_fresh_instance()})
+
+    def set_network(self, network):
+        self.network = network
 
 
 class TrainingNetPlayer(Player):
@@ -92,11 +108,15 @@ class TrainingNetPlayer(Player):
         move = self.game_manager.select_move(pi)
         return self.game_manager.network_to_board(move)
 
+    def make_fresh_instance(self):
+        raise NotImplementedError
+
 
 class HumanPlayer(Player):
     def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         self.name = self.__class__.__name__
         self.game_manager = game_manager
+        self.kwargs = kwargs
         self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
@@ -105,12 +125,16 @@ class HumanPlayer(Player):
         move = self.game_manager.get_human_input(board)
         return move
 
+    def make_fresh_instance(self):
+        return HumanPlayer(self.game_manager.make_fresh_instance(), **self.kwargs)
+
 
 class MinimaxPlayer(Player):
     def __init__(self, game_manager: TicTacToeGameManager, **kwargs):
         # self.evaluate_fn = evaluate_fn
         self.game_manager = game_manager
         self.name = self.__class__.__name__
+        self.kwargs = kwargs
         self.init_kwargs(kwargs)
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
@@ -142,7 +166,7 @@ class MinimaxPlayer(Player):
                 if alpha >= beta:
                     break
                 board[move[0]][move[1]] = 0
-            return best_score , best_move
+            return best_score, best_move
         else:
             best_score = float("inf")
             best_move = None
@@ -157,4 +181,7 @@ class MinimaxPlayer(Player):
                 if beta <= alpha:
                     break
                 board[move[0]][move[1]] = 0
-            return best_score , best_move
+            return best_score, best_move
+
+    def make_fresh_instance(self):
+        return MinimaxPlayer(self.game_manager.make_fresh_instance(), **self.kwargs)

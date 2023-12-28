@@ -77,7 +77,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_next_state(self, board: np.ndarray, board_index: tuple, player: int) -> np.ndarray:
+    def get_next_state(self, board: np.ndarray, action: int or tuple, player: int) -> np.ndarray:
         """
         This method plays move given by 'board_index' as 'player' on the given 'board'
         and returns the updated board.
@@ -119,3 +119,9 @@ class Game(ABC):
         This is used for minimax, override this method if you want to use it.
         """
         pass
+
+    @abstractmethod
+    def render(self):
+        """
+        Render the GUI of the game.
+        """

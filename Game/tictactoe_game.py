@@ -9,7 +9,7 @@ import seaborn as sns
 import torch as th
 from PIL import Image
 
-from Game.game import Game
+from General.az_game import Game
 
 
 class TicTacToeGameManager(Game):
@@ -401,10 +401,11 @@ class TicTacToeGameManager(Game):
     def get_canonical_form(board, player) -> np.ndarray:
         return board * player
 
-    @staticmethod
-    def get_next_state(board, board_index, player) -> np.ndarray:
+    def get_next_state(self, board: np.ndarray, action: int or tuple, player: int) -> np.ndarray:
+        if isinstance(action, int):
+            action = self.network_to_board(action)
         board_ = board.copy()
-        board_[board_index] = player
+        board_[action] = player
         return board_
 
     def set_headless(self, val: bool):

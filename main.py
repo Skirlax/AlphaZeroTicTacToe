@@ -1,13 +1,13 @@
 import os
 
-from AlphaZero.MCTS.search_tree import McSearchTree
+from AlphaZero.MCTS.az_search_tree import McSearchTree
 
 os.environ['OMP_NUM_THREADS'] = '5'
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 from AlphaZero.Network.trainer import Trainer
 
-from AlphaZero.constants import SAMPLE_ARGS as args_
-from AlphaZero.constants import TRAINED_NET_ARGS as _args
+from AlphaZero.constants import SAMPLE_AZ_ARGS as args_
+from AlphaZero.constants import TRAINED_AZ_NET_ARGS as _args
 from AlphaZero.utils import optuna_parameter_search, DotDict, make_net_from_checkpoint
 import argparse
 from AlphaZero.Arena.players import HumanPlayer, MinimaxPlayer, NetPlayer, RandomPlayer

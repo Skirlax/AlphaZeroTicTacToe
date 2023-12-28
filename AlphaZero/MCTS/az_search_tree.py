@@ -1,12 +1,13 @@
 import torch as th
 
-from AlphaZero.MCTS.node import Node
+from AlphaZero.MCTS.az_node import Node
 from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions, DotDict
 from Game.tictactoe_game import TicTacToeGameManager
+from General.search_tree import SearchTree
 
 
-class McSearchTree:
-    def __init__(self, game_manager: TicTacToeGameManager, args: DotDict):
+class McSearchTree(SearchTree):
+    def __init__(self, game_manager: TicTacToeGameManager, args: dict):
         self.game_manager = game_manager
         self.args = args
         self.root_node = None
@@ -143,3 +144,6 @@ class McSearchTree:
         else:
             # reset root node
             self.root_node = None
+
+    def make_fresh_instance(self):
+        return McSearchTree(self.game_manager.make_fresh_instance(), self.args)

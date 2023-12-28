@@ -88,7 +88,7 @@ class Node:
         # Not important for the algorithm, but might be useful for debugging.
         return self.total_value / self.times_visited if self.times_visited > 0 else 0
 
-    def get_self_action_probabilities(self, tau=1.0,adjust=True):
+    def get_self_action_probabilities(self, tau=1.0, adjust=True):
         total_times_visited = self.times_visited
         action_probs = {}
         # action_probs = dict.fromkeys(self.children.keys(), 0)
@@ -109,3 +109,6 @@ class Node:
             return GameManager.adjust_probabilities(action_probs, tau=tau)
         else:
             return action_probs
+
+    def get_latent(self):
+        return self.state

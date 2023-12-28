@@ -1,12 +1,15 @@
 import sys
+from typing import Type
 
 import torch as th
 
 from AlphaZero.Arena.arena import Arena
-from AlphaZero.MCTS.search_tree import McSearchTree
+from AlphaZero.Arena.players import NetPlayer
+from AlphaZero.MCTS.az_search_tree import McSearchTree
 from AlphaZero.Network.trainer import Trainer
 from AlphaZero.utils import DotDict
-from Game.game import Game
+from General.az_game import Game
+from General.network import GeneralNetwork
 
 
 class AlphaZero:
@@ -16,8 +19,14 @@ class AlphaZero:
         self.game = game_instance
         self.device = th.device("cuda" if th.cuda.is_available() else "cpu")
 
-    def create_new(self, args, headless: bool = True, checkpointer_verbose: bool = False):
-        self.trainer = Trainer.create(args, self.game, headless=headless, checkpointer_verbose=checkpointer_verbose)
+    def create_new(self, args: dict, network_class: Type[GeneralNetwork], headless: bool = True,
+                   checkpointer_verbose: bool = False):
+        network = network_class.make_from_args(args)
+        tree = McSearchTree(self.game.make_fresh_instance(), args)
+        net_player = NetPlayer(self.game.make_fresh_instance(), **{"network": network, "monte_carlo_tree_search": tree})
+        args = DotDict(args)
+        self.trainer = Trainer.create(args, self.game, tree, net_player, headless=headless,
+                                      checkpointer_verbose=checkpointer_verbose)
         self.net = self.trainer.get_network()
 
     def load_checkpoint(self, path: str, checkpoint_dir: str, headless: bool = True,

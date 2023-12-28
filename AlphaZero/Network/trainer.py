@@ -1,21 +1,23 @@
 # import CpSelfPlay
 from copy import deepcopy
 from multiprocessing import Pool
+from typing import Type
 
 import joblib
-import numpy as np
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from AlphaZero.Arena.arena import Arena
-from AlphaZero.Arena.players import NetPlayer, RandomPlayer, Player
-from AlphaZero.MCTS.search_tree import McSearchTree
+from AlphaZero.Arena.players import RandomPlayer, Player
+from AlphaZero.MCTS.az_search_tree import McSearchTree
 from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
-from AlphaZero.utils import check_args, DotDict, mask_invalid_actions_batch, build_net_from_args, build_all_from_args
-from Game.game import Game
+from AlphaZero.utils import check_args, DotDict, build_net_from_args, build_all_from_args
+from General.az_game import Game
+from General.network import GeneralNetwork
+from General.search_tree import SearchTree
 from mem_buffer import MemBuffer
 
 joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
@@ -25,9 +27,10 @@ set_start_method('spawn', force=True)
 
 
 class Trainer:
-    def __init__(self, network: TicTacToeNet, game: Game,
+    def __init__(self, network: Type[GeneralNetwork], game: Game,
                  optimizer: th.optim, memory: MemBuffer,
                  args: DotDict, checkpointer: CheckPointer,
+                 search_tree: SearchTree, net_player: Player,
                  device, headless: bool = True,
                  opponent_network_override: th.nn.Module or None = None) -> None:
         check_args(args)
@@ -35,35 +38,39 @@ class Trainer:
         self.device = device
         self.headless = headless
         self.game_manager = game
-        self.mcts = McSearchTree(self.game_manager, self.args)
+        self.mcts = search_tree
+        self.net_player = net_player
         self.network = network
-        self.opponent_network = build_net_from_args(args,
-                                                    device) if opponent_network_override is None \
-            else opponent_network_override
+        self.opponent_network = self.network.make_fresh_instance() if opponent_network_override is None else opponent_network_override
         self.optimizer = optimizer
         self.memory = memory
         self.summary_writer = SummaryWriter("Logs/AlphaZero")
-        self.mse_loss = th.nn.MSELoss()
         self.arena = Arena(self.game_manager, self.args, self.device)
         self.checkpointer = checkpointer
         self.logger = Logger()
         self.arena_win_frequencies = []
 
     @classmethod
-    def from_checkpoint(cls, checkpoint_path: str, checkpoint_dir: str, game: Game, headless: bool = True,
+    def from_checkpoint(cls, net_class: GeneralNetwork, tree_class: Type[McSearchTree], net_player_class: Type[Player],
+                        checkpoint_path: str, checkpoint_dir: str,
+                        game: Game, headless: bool = True,
                         checkpointer_verbose: bool = False):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         checkpointer = CheckPointer(checkpoint_dir, verbose=checkpointer_verbose)
 
         network_dict, optimizer_dict, memory, lr, args, opponent_dict = checkpointer.load_checkpoint_from_path(
             checkpoint_path)
-        network, optimizer, _ = build_all_from_args(args, device, lr=lr)
-        opponent_network = build_net_from_args(args, device)
-        del _
+        tree = tree_class(game.make_fresh_instance(), args)
+        network = net_class.make_from_args(args)
+        opponent_network = network.make_fresh_instance()
+        optimizer = th.optim.Adam(network.parameters(), lr=lr)
+        # opponent_network = build_net_from_args(args, device)
+        net_player = net_player_class(game.make_fresh_instance(),
+                                      **{"network": network, "monte_carlo_tree_search": tree})
         network.load_state_dict(network_dict)
         opponent_network.load_state_dict(opponent_dict)
         optimizer.load_state_dict(optimizer_dict)
-        return cls(network, game, optimizer, memory, args, checkpointer, device, headless=headless)
+        return cls(network, game, optimizer, memory, args, checkpointer, tree, net_player, device, headless=headless)
 
     @classmethod
     def from_latest(cls, path: str, game: Game, headless: bool = True, checkpointer_verbose: bool = False):
@@ -84,11 +91,13 @@ class Trainer:
         return cls(network, game, optimizer, memory, args, checkpointer, device, headless=headless)
 
     @classmethod
-    def create(cls, args: dict, game: Game, headless: bool = True, checkpointer_verbose: bool = False):
+    def create(cls, args: dict, game: Game, network: Type[GeneralNetwork],search_tree: SearchTree, net_player: Player, headless: bool = True,
+               checkpointer_verbose: bool = False):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
-        net, optimizer, memory = build_all_from_args(args, device)
+        _, optimizer, memory = build_all_from_args(args, device)
         checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
-        return cls(net, game, optimizer, memory, args, checkpointer, device, headless=headless)
+        args = DotDict(args)
+        return cls(network, game, optimizer, memory, args, checkpointer, search_tree, net_player, device, headless=headless)
 
     @classmethod
     def from_state_dict(cls, path: str, args: dict, game: Game, headless: bool = True,
@@ -98,11 +107,6 @@ class Trainer:
         checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
         net.load_state_dict(th.load(path))
         return cls(net, game, optimizer, memory, args, checkpointer, device, headless=headless)
-
-    def pi_loss(self, y_hat, y, masks):
-        masks = masks.reshape(y_hat.shape).to(self.device)
-        masked_y_hat = masks * y_hat
-        return -th.sum(y * masked_y_hat) / y.size()[0]
 
     def train(self) -> TicTacToeNet:
         self.logger.log(LoggingMessageTemplates.TRAINING_START(self.args["num_iters"]))
@@ -120,8 +124,11 @@ class Trainer:
                 self.args["arena_tau"] = 0
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
-                wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args["num_workers"], self_play_games)
+                # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args["num_workers"], self_play_games)
+                history,wins_p1, wins_p2, game_draws = self_play(
+                    (self.network, self.mcts, self.args["self_play_games"], self.device))
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
+                self.memory.add_list(history)
 
             self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
             self.summary_writer.add_scalar("Self-Play Loss Percentage Player One",
@@ -133,9 +140,9 @@ class Trainer:
             self.logger.log(LoggingMessageTemplates.SAVED("temp checkpoint", self.checkpointer.get_temp_path()))
 
             self.network.train()
-            self.memory.shuffle()
+            # self.memory.shuffle()
             self.logger.log(LoggingMessageTemplates.NETWORK_TRAINING_START(epochs))
-            mean_loss = self.train_network(epochs, i, batch_size)
+            mean_loss = self.network.train_net(self.memory, self.args)
             self.checkpointer.save_checkpoint(self.network, self.opponent_network, self.optimizer, self.memory,
                                               self.args["lr"], i, self.args, name="latest_trained_net")
 
@@ -144,14 +151,16 @@ class Trainer:
             self.logger.log(LoggingMessageTemplates.LOADED("opponent network", self.checkpointer.get_temp_path()))
             self.network.eval()
             self.opponent_network.eval()
-            p1_game_manager = self.game_manager.make_fresh_instance()
-            p2_game_manager = self.game_manager.make_fresh_instance()
-            p1_tree = McSearchTree(p1_game_manager, self.args)
-            p2_tree = McSearchTree(p2_game_manager, self.args)
+            # p1_game_manager = self.game_manager.make_fresh_instance()
+            # p2_game_manager = self.game_manager.make_fresh_instance()
+            # p1_tree = self.mcts.make_fresh_instance()
+            # p2_tree = self.mcts.make_fresh_instance()
             # p1 = NetPlayer(self.network, p1_tree, p1_game_manager)
-            p1 = NetPlayer(p1_game_manager,**{"network": self.network, "monte_carlo_tree_search": p1_tree})
+            p1 = self.net_player.make_fresh_instance()
+            p1.set_network(self.network)
             # p2 = NetPlayer(self.opponent_network, p2_tree, p2_game_manager)
-            p2 = NetPlayer(p2_game_manager,**{"network": self.opponent_network, "monte_carlo_tree_search": p2_tree})
+            p2 = self.net_player.make_fresh_instance()  # **{"network": self.opponent_network, "monte_carlo_tree_search": p2_tree}
+            p2.set_network(self.opponent_network)
             num_games = self.args["num_pit_games"]
             update_threshold = self.args["update_threshold"]
             self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, p2.name, num_games))
@@ -170,9 +179,10 @@ class Trainer:
             if i % self.args["random_pit_freq"] == 0:
                 self.network.eval()
                 with th.no_grad():
-                    random_player = RandomPlayer(self.game_manager, **{})
+                    random_player = RandomPlayer(self.game_manager.make_fresh_instance(), **{})
                     # self.network, self.mcts,
-                    p1 = NetPlayer(self.game_manager, **{"network": self.network, "monte_carlo_tree_search": self.mcts})
+                    p1 = self.net_player.make_fresh_instance()  # **{"network": self.network, "monte_carlo_tree_search": self.mcts}
+                    p1.set_network(self.network)
                     self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, random_player.name, num_games))
                     p1_wins_random, p2_wins_random, draws_random = self.arena.pit(p1, random_player, num_games,
                                                                                   num_mc_simulations=num_simulations)
@@ -215,21 +225,21 @@ class Trainer:
         self.logger.log(LoggingMessageTemplates.TRAINING_END(important_args))
         return self.network
 
-    def only_pit(self, p1: Player, p2: Player, num_games: int):
-        if p1 == NetPlayer and p2 == NetPlayer:
-            p1_manager = self.game_manager.make_fresh_instance()
-            p1_tree = McSearchTree(p1_manager, self.args)
-            p2_manager = self.game_manager.make_fresh_instance()
-            p2_tree = McSearchTree(p2_manager, self.args)
-            # p1 = NetPlayer(self.network, p1_tree, p1_manager)
-            p1 = NetPlayer(p1_manager,**{"network": self.network, "monte_carlo_tree_search": p1_tree})
-            # p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
-            p2 = NetPlayer(p2_manager,**{"network": self.opponent_network, "monte_carlo_tree_search": p2_tree})
-
-        # TODO: Handle other cases.
-
-        num_simulations = self.args["num_simulations"]
-        self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
+    # def only_pit(self, p1: Player, p2: Player, num_games: int):
+    #     if p1 == NetPlayer and p2 == NetPlayer:
+    #         p1_manager = self.game_manager.make_fresh_instance()
+    #         p1_tree = McSearchTree(p1_manager, self.args)
+    #         p2_manager = self.game_manager.make_fresh_instance()
+    #         p2_tree = McSearchTree(p2_manager, self.args)
+    #         # p1 = NetPlayer(self.network, p1_tree, p1_manager)
+    #         p1 = NetPlayer(p1_manager, **{"network": self.network, "monte_carlo_tree_search": p1_tree})
+    #         # p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
+    #         p2 = NetPlayer(p2_manager, **{"network": self.opponent_network, "monte_carlo_tree_search": p2_tree})
+    #
+    #     # TODO: Handle other cases.
+    #
+    #     num_simulations = self.args["num_simulations"]
+    #     self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
 
     def parallel_self_play(self, n_jobs: int, n_games: int) -> tuple:
         """
@@ -275,40 +285,10 @@ class Trainer:
         """
         trees = []
         for i in range(n):
-            manager = self.game_manager.make_fresh_instance()
-            trees.append(McSearchTree(manager, dict(self.args)))
+            # manager = self.game_manager.make_fresh_instance()
+            tree = self.mcts.make_fresh_instance()
+            trees.append(tree)
         return trees
-
-    def train_network(self, epochs: int, i: int, batch_size: int) -> float:
-        """
-        Trains self.network for the given number of epochs.
-
-        :param epochs: The number of epochs to train for.
-        :param i: Current training iteration.
-        :param batch_size: The batch size to use.
-        :return: The mean loss over all epochs.
-        """
-        losses = []
-        self.optimizer = th.optim.Adam(self.network.parameters(), lr=self.args["lr"])
-        for epoch in self.make_tqdm_bar(range(epochs), "Network Training Progress", 1, leave=False):
-            for experience_batch in self.memory(batch_size):
-                if len(experience_batch) <= 1:
-                    continue
-                states, pi, v = zip(*experience_batch)
-                states = th.tensor(np.array(states), dtype=th.float32, device=self.device)
-                pi = th.tensor(np.array(pi), dtype=th.float32, device=self.device)
-                v = th.tensor(v, dtype=th.float32, device=self.device).unsqueeze(1)
-                pi_pred, v_pred = self.network(states)
-                masks = mask_invalid_actions_batch(states)
-                loss = self.mse_loss(v_pred, v) + self.pi_loss(pi_pred, pi, masks)
-                losses.append(loss.item())
-                # self.summary_writer.add_scalar("Loss", loss.item(), i * epochs + epoch)
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-        return sum(losses) / len(losses)
 
     def get_arena_win_frequencies_mean(self):
         return sum(self.arena_win_frequencies) / self.not_zero(len(self.arena_win_frequencies))
@@ -354,6 +334,7 @@ def self_play(chunk) -> list:
     results = []
     for game in range(num_games):
         game_history, wins_one, wins_two, draws = tree.play_one_game(network, device)
+        return game_history, wins_one, wins_two, draws
         tree.step_root(None)
         results.append([game_history, wins_one, wins_two, draws])
     return results

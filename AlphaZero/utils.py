@@ -8,7 +8,7 @@ import torch as th
 from IPython import get_ipython
 
 from AlphaZero.Network.nnet import TicTacToeNet
-from AlphaZero.constants import SAMPLE_ARGS as test_args
+from AlphaZero.constants import SAMPLE_AZ_ARGS as test_args
 from mem_buffer import MemBuffer
 
 
