@@ -236,7 +236,6 @@ class Trainer:
     #         # p2 = NetPlayer(self.opponent_network, p2_tree, p2_manager)
     #         p2 = NetPlayer(p2_manager, **{"network": self.opponent_network, "monte_carlo_tree_search": p2_tree})
     #
-    #     # TODO: Handle other cases.
     #
     #     num_simulations = self.args["num_simulations"]
     #     self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations)
