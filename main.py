@@ -13,7 +13,7 @@ import argparse
 from AlphaZero.Arena.players import HumanPlayer, MinimaxPlayer, NetPlayer, RandomPlayer
 from Game.tictactoe_game import TicTacToeGameManager as GameManager
 from AlphaZero.Arena.arena import Arena
-
+from MuZero.utils import optuna_parameter_search as mu_optuna_parameter_search
 import torch as th
 
 
@@ -31,6 +31,23 @@ def main_alpha_zero_find_hyperparameters():
     init_net_path = args_.init_net_path
 
     optuna_parameter_search(n_trials=n_trials, init_net_path=init_net_path,
+                            storage=storage, study_name=study_name)
+
+
+def main_mu_zero_find_hyperparameters():
+    parser_ = argparse.ArgumentParser()
+    parser_.add_argument("-s", "--storage", help="The storage string to use.")
+    parser_.add_argument("-n", "--study_name", help="The name of the optuna study to use.")
+    parser_.add_argument("-t", "--n_trials", help="The number of trials to run.")
+    parser_.add_argument("-i", "--init_net_path", help="The path to the initial network.")
+
+    args_ = parser_.parse_args()
+    storage = args_.storage
+    study_name = args_.study_name
+    n_trials = int(args_.n_trials)
+    init_net_path = args_.init_net_path
+
+    mu_optuna_parameter_search(n_trials=n_trials, init_net_path=init_net_path,
                             storage=storage, study_name=study_name)
 
 
@@ -99,20 +116,21 @@ def play():
 
 def human_minimax_play():
     args = DotDict(_args)
-    manager = GameManager(4, headless=False, num_to_win=4)
-    p1 = HumanPlayer(manager, **{})
+    manager = GameManager(8, headless=False, num_to_win=5)
+    p1 = HumanPlayer(manager.make_fresh_instance(), **{})
     new_man = manager.make_fresh_instance()
     p2 = MinimaxPlayer(new_man,
                        **{"evaluate_fn": new_man.eval_board})
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager.make_fresh_instance(), args, device)
     net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
-                                            start_player=1, add_to_kwargs={"depth": 10, "player": -1})
+                                            start_player=1, add_to_kwargs={"depth": 5, "player": -1}, debug=True)
 
 
 if __name__ == "__main__":
     # human_minimax_play()
-    play()
+    main_mu_zero_find_hyperparameters()
+    # play()
     #
     # main_alpha_zero()
     # main_alpha_zero_find_hyperparameters()

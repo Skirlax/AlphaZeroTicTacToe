@@ -8,7 +8,7 @@ class MuZeroGame(ABC):
 
     @abstractmethod
     def get_next_state(self, action: int, player: int or None) -> (
-            np.ndarray or th.Tensor, int,bool):
+            np.ndarray or th.Tensor, int, bool):
         """
         Given a game state and an action return the next state. If player is None, one player is assumed.
         :param state: The current state of the game.
@@ -69,4 +69,10 @@ class MuZeroGame(ABC):
         """
         pass
 
+    @staticmethod
+    @abstractmethod
+    def select_move(action_probs: dict):
+        pass
 
+    def get_random_valid_action(self,board: np.ndarray):
+        pass

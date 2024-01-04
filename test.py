@@ -1,14 +1,13 @@
-import math
+import pstats
 
-parent_visits = 100
-child_visits = 45
-prob = 0.8
-c2 = 1
-c1 = 1
-term1 = (math.sqrt(parent_visits) / (1 + child_visits))
-term2 = c1 + math.log((parent_visits + c2 + 1) / c2)
-partial_utc = prob * term1 * term2
-print(partial_utc)
-print(f"Term1: {term1}")
-print(f"Term2: {term2}")
-print(f"Original partial UTC: {prob * term1}")
+# Create a Stats object
+stats = pstats.Stats('/home/skyr/Downloads/self_play_profiling.txt')
+
+# Strip directories from file paths in the report, making it easier to read
+stats.strip_dirs()
+
+# Sort the data by cumulative time in the function
+stats.sort_stats('cumulative')
+
+# Print out the first 10 lines of the report
+stats.print_stats(10)

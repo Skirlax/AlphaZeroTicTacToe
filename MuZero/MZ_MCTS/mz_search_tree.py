@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import torch as th
 
@@ -17,7 +19,7 @@ class MuZeroSearchTree(SearchTree):
         self.buffer = MuZeroFrameBuffer(self.args["frame_buffer_size"], self.game_manager.get_noop())
         self.min_max_q = [float("inf"), -float("inf")]
 
-    def play_one_game(self, network_wrapper, device: th.device) -> tuple[list, int, int, int]:
+    def play_one_game(self, network_wrapper: th.nn.Module, device: th.device) -> tuple[list, int, int, int]:
         num_steps = self.args["num_steps"]
         frame_skip = self.args["frame_skip"]
         state = self.game_manager.reset()
@@ -26,6 +28,7 @@ class MuZeroSearchTree(SearchTree):
         data = []
         for step in range(num_steps):
             pi, v = self.search(network_wrapper, state, None, device)
+            # print(f"Search at {step} finished",file=open("search.txt", "a"))
             move = TicTacToeGameManager.select_move(pi)
             state, rew, done = self.game_manager.frame_skip_wrapper(move, None, frame_skip=frame_skip)
             state = resize_obs(state, (96, 96))
@@ -38,6 +41,8 @@ class MuZeroSearchTree(SearchTree):
 
     def search(self, network_wrapper, state: np.ndarray, current_player: int or None, device: th.device,
                tau: float or None = None):
+        if len(self.buffer) == 0:
+            self.buffer.init_buffer(state)
         num_simulations = self.args["num_simulations"]
         if tau is None:
             tau = self.args["tau"]
@@ -45,7 +50,8 @@ class MuZeroSearchTree(SearchTree):
         root_node = MzNode()
         # state_ = th.tensor(state, dtype=th.float32, device=device).unsqueeze(0)
         # transpose to channels first
-        state_ = network_wrapper.representation_forward(self.buffer.concat_frames().permute(2, 0, 1).unsqueeze(0)).squeeze(0)
+        state_ = network_wrapper.representation_forward(
+            self.buffer.concat_frames().permute(2, 0, 1).unsqueeze(0)).squeeze(0)
         pi, v = network_wrapper.prediction_forward(state_.unsqueeze(0), predict=True)
         # might mask
         pi = pi.flatten().tolist()
@@ -85,7 +91,7 @@ class MuZeroSearchTree(SearchTree):
             node.times_visited += 1
 
     def make_fresh_instance(self):
-        return MuZeroSearchTree(self.game_manager.make_fresh_instance(), self.args)
+        return MuZeroSearchTree(self.game_manager.make_fresh_instance(), copy.deepcopy(self.args))
 
     def step_root(self, action: int or None):
         pass

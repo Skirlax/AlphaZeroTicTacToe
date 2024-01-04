@@ -90,13 +90,17 @@ class TicTacToeGameManager(Game):
         # results.append(func(np.fliplr(arr).diagonal().reshape(-1)))
         return results
 
-    def eval_board(self, board: np.ndarray, player: int) -> int:
-        score = 0
-        for i in range(self.num_to_win // 2, self.num_to_win + 1):
-            match_ = self.check_partial_win(player, i, board=board)
-            if match_:
-                score += i ** 2
-        return score
+    def eval_board(self, board: np.ndarray) -> int | None:
+        # score = 0
+        current_won = self.check_partial_win(-1,self.num_to_win,board=board)
+        opp_won = self.check_partial_win(1,self.num_to_win,board=board)
+        if current_won:
+            return 1
+        if opp_won:
+            return -1
+        if self.is_board_full(board=board):
+            return 0
+        return None
 
     def full_iterate_array_all_diags(self, arr: np.ndarray, func: callable):
 
@@ -126,10 +130,10 @@ class TicTacToeGameManager(Game):
         return np.array(vectors)
 
     def check_win(self, player: int, board=None) -> bool:
-        if self.num_to_win == self.board_size:
-            return self.check_full_win(player, board=board)
-        else:
-            return self.check_partial_win(player, self.num_to_win, board=board)
+        # if self.num_to_win == self.board_size:
+        #     return self.check_full_win(player, board=board)
+        # else:
+        return self.check_partial_win(player, self.num_to_win, board=board)
 
     def check_full_win(self, player: int, board=None) -> bool:
         """

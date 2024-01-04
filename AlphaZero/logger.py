@@ -1,3 +1,4 @@
+import atexit
 import datetime
 import logging
 import os
@@ -17,6 +18,7 @@ class Logger:
         self.logger.addHandler(self.file_handler)
         formatter = logging.Formatter("[%(asctime)s - %(levelname)s] %(message)s")
         self.file_handler.setFormatter(formatter)
+        atexit.register(self.cleanup)
 
     def log(self, msg: str, level: str = "debug") -> None:
         getattr(self.logger, level)(msg)
@@ -25,7 +27,7 @@ class Logger:
         for file_name in os.listdir(self.logdir):
             os.remove(f"{self.logdir}/{file_name}")
 
-    def __del__(self):
+    def cleanup(self) -> None:
         self.file_handler.close()
         self.logger.removeHandler(self.file_handler)
 
@@ -37,19 +39,19 @@ class LoggingMessageTemplates:
         return f"Starting pitting between {name1} and {name2} for {num_games} games."
 
     @staticmethod
-    def PITTING_END(name1: str, name2: str, wins1: int, wins2: int, draws: int):
+    def PITTING_END(name1: str, name2: str, wins1: int, wins2: int, total: int, draws: int):
         return (f"Pitting ended between {name1} and {name2}. "
-                f"Player 1 win frequency: {wins1 / (wins1 + wins2 + draws)}. "
-                f"Player 2 win frequency: {wins2 / (wins1 + wins2 + draws)}. Draws: {draws}.")
+                f"Player 1 win frequency: {wins1 / total}. "
+                f"Player 2 win frequency: {wins2 / total}. Draws: {draws}.")
 
     @staticmethod
     def SELF_PLAY_START(num_games: int):
         return f"Starting self play for {num_games} games."
 
     @staticmethod
-    def SELF_PLAY_END(wins1: int, wins2: int, draws: int):
-        return (f"Self play ended. Player 1 win frequency: {wins1 / (wins1 + wins2 + draws)}. "
-                f"Player 2 win frequency: {wins2 / (wins1 + wins2 + draws)}. Draws: {draws}.")
+    def SELF_PLAY_END(wins1: int, wins2: int, draws: int, not_zero_fn: callable):
+        return (f"Self play ended. Player 1 win frequency: {wins1 / (not_zero_fn(wins1 + wins2 + draws))}. "
+                f"Player 2 win frequency: {wins2 / (not_zero_fn(wins1 + wins2 + draws))}. Draws: {draws}.")
 
     @staticmethod
     def NETWORK_TRAINING_START(num_epchs: int):

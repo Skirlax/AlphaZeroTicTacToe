@@ -40,7 +40,11 @@ class RandomPlayer(Player):
 
     def choose_move(self, board: np.ndarray, **kwargs) -> tuple[int, int]:
         move = self.game_manager.get_random_valid_action(board)
-        return tuple(move)
+        if "unravel" in kwargs.keys():
+            unravel = kwargs["unravel"]
+        else:
+            unravel = True
+        return tuple(move) if unravel else int(move)
 
     def make_fresh_instance(self):
         return RandomPlayer(self.game_manager.make_fresh_instance(), **self.kwargs)
@@ -66,10 +70,12 @@ class NetPlayer(Player):
 
         pi, _ = self.monte_carlo_tree_search.search(self.network, board, current_player, device, tau=tau)
         move = self.game_manager.select_move(pi)
-        # print(self.game_manager.network_to_board(move))
-        # visualize_tree(self.monte_carlo_tree_search.root_node, output_file_name="tree_viz",depth_limit=2)
         self.monte_carlo_tree_search.step_root(None)
-        return self.game_manager.network_to_board(move)
+        if "unravel" in kwargs.keys():
+            unravel = kwargs["unravel"]
+        else:
+            unravel = True
+        return self.game_manager.network_to_board(move) if unravel else move
 
     def make_fresh_instance(self):
         return NetPlayer(self.game_manager.make_fresh_instance(), **{"network": self.network,
@@ -143,14 +149,15 @@ class MinimaxPlayer(Player):
             player = kwargs["player"]
         except KeyError:
             raise KeyError("Missing keyword argument. Please supply kwargs: depth, player")
-        move = self.minimax(board, depth, True, player)[1]
+        move = self.minimax(board.copy(), depth, True, player)[1]
         return tuple(move)
 
     def minimax(self, board: np.ndarray, depth: int, is_max: bool, player: int, alpha=-float("inf"),
                 beta=float("inf")) -> tuple:
         self.game_manager.check_pg_events()
-        if depth == 0:
-            return self.evaluate_fn(board, player), None
+        eval_ = self.evaluate_fn(board)
+        if eval_ is not None:
+            return eval_, None
 
         if is_max:
             best_score = -float("inf")
@@ -158,6 +165,8 @@ class MinimaxPlayer(Player):
             for move in self.game_manager.get_valid_moves(board):
                 board[move[0]][move[1]] = player
                 score = self.minimax(board.copy(), depth - 1, False, -player, alpha, beta)[0]
+                # print(score)
+                board[move[0]][move[1]] = 0
                 if score > best_score:
                     best_move = move
                 best_score = max(score, best_score)
@@ -165,7 +174,8 @@ class MinimaxPlayer(Player):
 
                 if alpha >= beta:
                     break
-                board[move[0]][move[1]] = 0
+            # if best_move is None:
+            #     return self.evaluate_fn(board, player), None
             return best_score, best_move
         else:
             best_score = float("inf")
@@ -173,14 +183,17 @@ class MinimaxPlayer(Player):
             for move in self.game_manager.get_valid_moves(board):
                 board[move[0]][move[1]] = player
                 score = self.minimax(board.copy(), depth - 1, True, -player, alpha, beta)[0]
-                if score < best_score:
-                    best_move = move
+                if score is None:
+                    continue
+                # print(score)
+                board[move[0]][move[1]] = 0
                 best_score = min(score, best_score)
                 beta = min(beta, best_score)
 
                 if beta <= alpha:
                     break
-                board[move[0]][move[1]] = 0
+            # if best_move is None:
+            #     return self.evaluate_fn(board, player), None
             return best_score, best_move
 
     def make_fresh_instance(self):

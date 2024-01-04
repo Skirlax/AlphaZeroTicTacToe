@@ -25,3 +25,7 @@ class GeneralNetwork(ABC):
         Trains the network for given number of epochs
         """
         pass
+
+    @abstractmethod
+    def to_shared_memory(self):
+        pass

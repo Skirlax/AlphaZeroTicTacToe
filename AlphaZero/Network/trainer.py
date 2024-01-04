@@ -1,9 +1,16 @@
-# import CpSelfPlay
+import copy
+# import multiprocessing
+# import logging
+# multiprocessing.log_to_stderr()
+# logger = multiprocessing.get_logger()
+# logger.setLevel(logging.DEBUG)
 from copy import deepcopy
-from multiprocessing import Pool
+# from torch.multiprocessing import set_start_method
+#
+# set_start_method('spawn', force=True)
+# from torch.multiprocessing.pool import Pool
+# import cProfile
 from typing import Type
-
-import joblib
 import torch as th
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -15,24 +22,25 @@ from AlphaZero.Network.nnet import TicTacToeNet
 from AlphaZero.checkpointer import CheckPointer
 from AlphaZero.logger import LoggingMessageTemplates, Logger
 from AlphaZero.utils import check_args, DotDict, build_net_from_args, build_all_from_args
+from General.arena import GeneralArena
 from General.az_game import Game
 from General.network import GeneralNetwork
 from General.search_tree import SearchTree
 from mem_buffer import MemBuffer
+import ray
+ray.init(num_cpus=16,num_gpus=1)
 
-joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
-from multiprocessing import set_start_method
-
-set_start_method('spawn', force=True)
+# joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
 
 
 class Trainer:
-    def __init__(self, network: Type[GeneralNetwork], game: Game,
+    def __init__(self, network: GeneralNetwork, game: Game,
                  optimizer: th.optim, memory: MemBuffer,
                  args: DotDict, checkpointer: CheckPointer,
                  search_tree: SearchTree, net_player: Player,
                  device, headless: bool = True,
-                 opponent_network_override: th.nn.Module or None = None) -> None:
+                 opponent_network_override: th.nn.Module or None = None,
+                 arena_override: GeneralArena or None = None) -> None:
         check_args(args)
         self.args = args
         self.device = device
@@ -45,7 +53,7 @@ class Trainer:
         self.optimizer = optimizer
         self.memory = memory
         self.summary_writer = SummaryWriter("Logs/AlphaZero")
-        self.arena = Arena(self.game_manager, self.args, self.device)
+        self.arena = Arena(self.game_manager, self.args, self.device) if arena_override is None else arena_override
         self.checkpointer = checkpointer
         self.logger = Logger()
         self.arena_win_frequencies = []
@@ -54,7 +62,8 @@ class Trainer:
     def from_checkpoint(cls, net_class: GeneralNetwork, tree_class: Type[McSearchTree], net_player_class: Type[Player],
                         checkpoint_path: str, checkpoint_dir: str,
                         game: Game, headless: bool = True,
-                        checkpointer_verbose: bool = False):
+                        checkpointer_verbose: bool = False,
+                        arena_override: GeneralArena or None = None):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         checkpointer = CheckPointer(checkpoint_dir, verbose=checkpointer_verbose)
 
@@ -70,7 +79,8 @@ class Trainer:
         network.load_state_dict(network_dict)
         opponent_network.load_state_dict(opponent_dict)
         optimizer.load_state_dict(optimizer_dict)
-        return cls(network, game, optimizer, memory, args, checkpointer, tree, net_player, device, headless=headless)
+        return cls(network, game, optimizer, memory, args, checkpointer, tree, net_player, device, headless=headless,
+                   arena_override=arena_override)
 
     @classmethod
     def from_latest(cls, path: str, game: Game, headless: bool = True, checkpointer_verbose: bool = False):
@@ -91,13 +101,16 @@ class Trainer:
         return cls(network, game, optimizer, memory, args, checkpointer, device, headless=headless)
 
     @classmethod
-    def create(cls, args: dict, game: Game, network: Type[GeneralNetwork],search_tree: SearchTree, net_player: Player, headless: bool = True,
-               checkpointer_verbose: bool = False):
+    def create(cls, args: dict, game: Game, network: GeneralNetwork, search_tree: SearchTree, net_player: Player,
+               headless: bool = True,
+               checkpointer_verbose: bool = False,
+               arena_override: GeneralArena or None = None):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         _, optimizer, memory = build_all_from_args(args, device)
         checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
         args = DotDict(args)
-        return cls(network, game, optimizer, memory, args, checkpointer, search_tree, net_player, device, headless=headless)
+        return cls(network, game, optimizer, memory, args, checkpointer, search_tree, net_player, device,
+                   headless=headless, arena_override=arena_override)
 
     @classmethod
     def from_state_dict(cls, path: str, args: dict, game: Game, headless: bool = True,
@@ -109,8 +122,10 @@ class Trainer:
         return cls(net, game, optimizer, memory, args, checkpointer, device, headless=headless)
 
     def train(self) -> TicTacToeNet:
+        self.opponent_network.to(self.device)
         self.logger.log(LoggingMessageTemplates.TRAINING_START(self.args["num_iters"]))
         self.opponent_network.load_state_dict(self.network.state_dict())
+        # self.network.to_shared_memory()
         # self.checkpointer.save_state_dict_checkpoint(self.network, "h_search_network")
         num_iters = self.args["num_iters"]
         epochs = self.args["epochs"]
@@ -124,11 +139,11 @@ class Trainer:
                 self.args["arena_tau"] = 0
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
-                # wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args["num_workers"], self_play_games)
-                history,wins_p1, wins_p2, game_draws = self_play(
-                    (self.network, self.mcts, self.args["self_play_games"], self.device))
-                self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws))
-                self.memory.add_list(history)
+                wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args["num_workers"], self_play_games)
+                # cProfile.runctx("self.parallel_self_play(self.args['num_workers'], self_play_games)", globals(), locals(),
+                #                 "self_play_profiling.txt")
+                # exit(0)
+                self.logger.log(LoggingMessageTemplates.SELF_PLAY_END(wins_p1, wins_p2, game_draws, self.not_zero))
 
             self.summary_writer.add_scalar("Self-Play Win Percentage Player One", wins_p1 / self_play_games, i)
             self.summary_writer.add_scalar("Self-Play Loss Percentage Player One",
@@ -166,10 +181,10 @@ class Trainer:
             self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, p2.name, num_games))
             p1_wins, p2_wins, draws = self.arena.pit(p1, p2, num_games, num_mc_simulations=num_simulations,
                                                      one_player=False)
-            self.logger.log(LoggingMessageTemplates.PITTING_END(p1.name, p2.name, p1_wins,
-                                                                p2_wins, draws))
-            self.arena_win_frequencies.append(p1_wins / num_games)
             wins_total = self.not_zero(p1_wins + p2_wins)
+            self.logger.log(LoggingMessageTemplates.PITTING_END(p1.name, p2.name, p1_wins,
+                                                                p2_wins, wins_total, draws))
+            self.arena_win_frequencies.append(p1_wins / num_games)
             self.summary_writer.add_scalar("Net_vs_Net Win Percentage Player One", p1_wins / wins_total,
                                            i)
             self.summary_writer.add_scalar("Net_vs_Net Loss Percentage Player One",
@@ -186,9 +201,10 @@ class Trainer:
                     self.logger.log(LoggingMessageTemplates.PITTING_START(p1.name, random_player.name, num_games))
                     p1_wins_random, p2_wins_random, draws_random = self.arena.pit(p1, random_player, num_games,
                                                                                   num_mc_simulations=num_simulations)
+                    wins_total = self.not_zero(p1_wins_random + p2_wins_random)
                     self.logger.log(
                         LoggingMessageTemplates.PITTING_END(p1.name, random_player.name, p1_wins_random,
-                                                            p2_wins_random, draws_random))
+                                                            p2_wins_random, wins_total, draws_random))
                     self.summary_writer.add_scalar("Net_vs_Random Win Percentage Player One",
                                                    p1_wins_random / num_games, i)
                     self.summary_writer.add_scalar("Net_vs_Random Loss Percentage Player One",
@@ -251,11 +267,10 @@ class Trainer:
         """
         networks = self.make_n_networks(n_jobs)
         trees = self.make_n_trees(n_jobs)
+        # assume network in shared memory
         num_games = n_games // n_jobs
-        print(f"Starting parallel self-play with {n_jobs} processes (games per process: {num_games})")
-        chunks = [(net, tree, num_games, self.device) for net, tree in zip(networks, trees)]
-        with Pool(processes=n_jobs) as pool:
-            results = pool.map(self_play, chunks)
+        futures = [self_play.remote(networks[i], trees[i], num_games, copy.deepcopy(self.device)) for i in range(n_jobs)]
+        results = ray.get(futures)
         wins_one = 0
         wins_two = 0
         draws = 0
@@ -328,12 +343,12 @@ class Trainer:
         return self.network
 
 
-def self_play(chunk) -> list:
-    network, tree, num_games, device = chunk
+@ray.remote(num_cpus=16,num_gpus=1)
+def self_play(network, tree, num_games, device) -> list:
     results = []
     for game in range(num_games):
         game_history, wins_one, wins_two, draws = tree.play_one_game(network, device)
-        return game_history, wins_one, wins_two, draws
+        # print(f"Game {game + 1} finished.", file=open("self_play_log.txt", "a"))
         tree.step_root(None)
         results.append([game_history, wins_one, wins_two, draws])
     return results

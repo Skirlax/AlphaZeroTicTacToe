@@ -29,7 +29,7 @@ def main():
     t = int(args.t)
     storage = args.storage
     if storage is None:
-        storage = "mysql://alpha:584792@localhost/alpha_zero"
+        storage = "mysql://root:584792@localhost/alpha_zero"
     study_name = args.study_name
     if study_name is None:
         study_name = "alpha_zero"
@@ -47,7 +47,7 @@ def main():
     procs = []
     for i in range(n):
         procs.append(subprocess.Popen(
-            ["python3.11", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
+            ["python", "main.py", "-s", storage, "-n", study_name, "-t", str(num_trials), "-i", init_net_path]))
     for proc in procs:
         proc.wait()
 

@@ -1,3 +1,4 @@
+import atexit
 import glob
 import os
 
@@ -5,10 +6,11 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.functional import mse_loss
 
 from General.network import GeneralNetwork
 from mem_buffer import MemBuffer
-from torch.nn.functional import mse_loss
+
 
 class TicTacToeNet(nn.Module, GeneralNetwork):
     def __init__(self, in_channels, num_channels, dropout, action_size):
@@ -40,8 +42,9 @@ class TicTacToeNet(nn.Module, GeneralNetwork):
         # Output layers
         self.pi = nn.Linear(512, action_size)  # probability head
         self.v = nn.Linear(512, 1)  # value head
+        atexit.register(self.clear_traces)
 
-    def forward(self, x,muzero=False):
+    def forward(self, x, muzero=False):
         if not muzero:
             x = x.unsqueeze(0)
         x = F.relu(self.bn1(self.conv1(x)))
@@ -63,8 +66,8 @@ class TicTacToeNet(nn.Module, GeneralNetwork):
         return pi, v
 
     @th.no_grad()
-    def predict(self, x,muzero=False):
-        pi, v = self.forward(x,muzero=muzero)
+    def predict(self, x, muzero=False):
+        pi, v = self.forward(x, muzero=muzero)
         pi = th.exp(pi)
         return pi.detach().cpu().numpy(), v.detach().cpu().numpy()
 
@@ -77,7 +80,7 @@ class TicTacToeNet(nn.Module, GeneralNetwork):
         traced.save(path)
         return path
 
-    def __del__(self):
+    def clear_traces(self) -> None:
         from AlphaZero.utils import find_project_root
         for trace_file in glob.glob(f"{find_project_root()}/Checkpoints/Traces/*.pt"):
             os.remove(trace_file)
@@ -120,6 +123,10 @@ class TicTacToeNet(nn.Module, GeneralNetwork):
         masks = masks.reshape(y_hat.shape).to(self.device)
         masked_y_hat = masks * y_hat
         return -th.sum(y * masked_y_hat) / y.size()[0]
+
+    def to_shared_memory(self):
+        for param in self.parameters():
+            param.share_memory_()
 
 
 class TicTacToeNetNoNorm(nn.Module):

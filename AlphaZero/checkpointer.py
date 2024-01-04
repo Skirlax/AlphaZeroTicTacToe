@@ -1,10 +1,10 @@
 import os
-import shutil
 
 import torch as th
 
 from AlphaZero.utils import find_project_root, DotDict
 from mem_buffer import MemBuffer
+import atexit
 
 
 class CheckPointer:
@@ -14,6 +14,7 @@ class CheckPointer:
         self.__checkpoint_num = self.initialize_checkpoint_num()
         self.__name_prefix = "improved_net_"
         self.verbose = verbose
+        atexit.register(self.cleanup)
 
     def make_dir(self) -> None:
         if self.__checkpoint_dir is not None:
@@ -109,5 +110,6 @@ class CheckPointer:
         if self.verbose:
             print(msg)
 
-    def __del__(self) -> None:
+    def cleanup(self):
+        import shutil
         shutil.rmtree(f"{self.__checkpoint_dir}/Temp/", ignore_errors=True)

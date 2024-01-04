@@ -3,6 +3,7 @@ import torch as th
 from gymnasium import make
 
 from General.mz_game import MuZeroGame
+from Game.tictactoe_game import TicTacToeGameManager
 
 
 class Asteroids(MuZeroGame):
@@ -41,3 +42,10 @@ class Asteroids(MuZeroGame):
 
     def render(self):
         pass
+
+    @staticmethod
+    def select_move(action_probs: dict):
+        return TicTacToeGameManager.select_move(action_probs)
+
+    def get_random_valid_action(self,board: np.ndarray):
+        return self.env.action_space.sample()

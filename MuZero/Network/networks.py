@@ -8,7 +8,7 @@ from torch.nn.functional import mse_loss
 
 from AlphaZero.Network.nnet import TicTacToeNet as PredictionNet
 from General.network import GeneralNetwork
-from MuZero.utils import match_action_with_obs_batch, add_actions_to_obs, scale_reward_value
+from MuZero.utils import match_action_with_obs_batch, scale_reward_value
 from mem_buffer import MemBuffer
 
 
@@ -46,9 +46,9 @@ class MuZeroNet(th.nn.Module, GeneralNetwork):
 
     def prediction_forward(self, x: th.Tensor, predict: bool = False):
         if predict:
-            pi,v = self.prediction_network.predict(x,muzero=True)
+            pi, v = self.prediction_network.predict(x, muzero=True)
             v = scale_reward_value(v[0][0])
-            return pi,v
+            return pi, v
         pi, v = self.prediction_network(x, muzero=True)
         v = scale_reward_value(v)
         return pi, v
@@ -107,6 +107,10 @@ class MuZeroNet(th.nn.Module, GeneralNetwork):
 
     def muzero_pi_loss(self, y_hat, y):
         return -th.sum(y * y_hat) / y.size()[0]
+
+    def to_shared_memory(self):
+        for param in self.parameters():
+            param.share_memory_()
 
 
 class RepresentationNet(th.nn.Module):

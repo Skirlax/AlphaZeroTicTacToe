@@ -1,7 +1,7 @@
 import random
 from collections import deque
 from itertools import chain
-import numpy as np
+
 import torch as th
 from torch.utils.data import Dataset, DataLoader
 
@@ -57,7 +57,7 @@ class MemBuffer:
 
     def batch_with_priorities(self, batch_size, K, alpha=1):
         if len(self.temp_buffer) == 0:
-            return [],[]
+            return [], []
         priorities = self.calculate_priorities(batch_size, alpha, K)
         batch = []
         pris = []
@@ -72,12 +72,12 @@ class MemBuffer:
         yield batch, pris
 
     def calculate_priorities(self, batch_size, alpha, K):
-        ps = [(abs(self.buffer[i][2][0] - self.buffer[i][2][1]), i) for i in range(len(self.buffer))]
+        ps = [(abs(self.temp_buffer[i][2][0] - self.temp_buffer[i][2][1]), i) for i in range(len(self.temp_buffer))]
         ps = [(p[0] ** alpha, p[1]) for p in ps]
         ps.sort(reverse=True, key=lambda x: x[0])
         # choices = np.random.choice([x[1] for x in ps],size=(batch_size),replace=False,p=[p[0] for p in ps]).tolist()
         # ps = [x for x in choices if x in [p[1] for p in ps]]
-        ps = [ps[i:i + K] for i in range(int(batch_size // K))]
+        ps = [ps[i:i + K] for i in range(0,int(batch_size // K),K)]
         ps = list(chain(*ps))
         sum_p = sum([p[0] for p in ps])
         return {p[1]: p[0] / sum_p for p in ps}
@@ -105,3 +105,6 @@ class MuZeroFrameBuffer:
     def init_buffer(self, init_state):
         for _ in range(self.max_size):
             self.add_frame(init_state, self.noop_action)
+
+    def __len__(self):
+        return len(self.buffer)

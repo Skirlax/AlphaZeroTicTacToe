@@ -17,5 +17,8 @@ mysql-connector-python
 joblib
 dill
 ipython
+seaborn
+gymnasium[atari]
+multiprocess
 # manimgl
 # pygraphviz

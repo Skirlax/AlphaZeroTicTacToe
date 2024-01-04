@@ -4,9 +4,10 @@ from typing import Type
 from AlphaZero.Arena.players import Player
 from AlphaZero.utils import DotDict
 from Game.tictactoe_game import TicTacToeGameManager as GameManager
+from General.arena import GeneralArena
 
 
-class Arena:
+class Arena(GeneralArena):
     def __init__(self, game_manager: GameManager, args: DotDict, device):
         self.game_manager = game_manager
         self.device = device
@@ -52,7 +53,6 @@ class Arena:
                 self.game_manager.render()
                 if current_player == 1:
                     move = player1.choose_move(state, **kwargs)
-                    # self.game_manager.play(current_player, move)
                 else:
                     move = player2.choose_move(state, **kwargs)
                 self.game_manager.play(current_player, move)
@@ -66,18 +66,14 @@ class Arena:
                     if status == 1:
                         if current_player == 1:
                             results["wins_p1"] += 1
-                            print("Player 1 wins.")
                         else:
                             results["wins_p2"] += 1
-                            print("Player 2 wins.")
 
                     elif status == -1:
                         if current_player == 1:
                             results["wins_p2"] += 1
-                            print("Player 2 wins.")
                         else:
                             results["wins_p1"] += 1
-                            print("Player 1 wins.")
                     else:
                         results["draws"] += 1
 
