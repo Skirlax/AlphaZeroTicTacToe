@@ -1,4 +1,3 @@
-import copy
 # import multiprocessing
 # import logging
 # multiprocessing.log_to_stderr()
@@ -11,10 +10,14 @@ from copy import deepcopy
 # from torch.multiprocessing.pool import Pool
 # import cProfile
 from typing import Type
+
+import ray
 import torch as th
+from ray.util.multiprocessing import Pool
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+import mem_buffer
 from AlphaZero.Arena.arena import Arena
 from AlphaZero.Arena.players import RandomPlayer, Player
 from AlphaZero.MCTS.az_search_tree import McSearchTree
@@ -24,18 +27,19 @@ from AlphaZero.logger import LoggingMessageTemplates, Logger
 from AlphaZero.utils import check_args, DotDict, build_net_from_args, build_all_from_args
 from General.arena import GeneralArena
 from General.az_game import Game
+from General.memory import GeneralMemoryBuffer
 from General.network import GeneralNetwork
 from General.search_tree import SearchTree
-from mem_buffer import MemBuffer
-import ray
-ray.init(num_cpus=16,num_gpus=1)
+
+
+
 
 # joblib.parallel.BACKENDS['multiprocessing'].use_dill = True
 
 
 class Trainer:
     def __init__(self, network: GeneralNetwork, game: Game,
-                 optimizer: th.optim, memory: MemBuffer,
+                 optimizer: th.optim, memory: GeneralMemoryBuffer,
                  args: DotDict, checkpointer: CheckPointer,
                  search_tree: SearchTree, net_player: Player,
                  device, headless: bool = True,
@@ -57,6 +61,8 @@ class Trainer:
         self.checkpointer = checkpointer
         self.logger = Logger()
         self.arena_win_frequencies = []
+        self.store_in_db = self.args["store_in_db"]
+        self.db_class_name = self.args["db_class_name"]
 
     @classmethod
     def from_checkpoint(cls, net_class: GeneralNetwork, tree_class: Type[McSearchTree], net_player_class: Type[Player],
@@ -104,9 +110,11 @@ class Trainer:
     def create(cls, args: dict, game: Game, network: GeneralNetwork, search_tree: SearchTree, net_player: Player,
                headless: bool = True,
                checkpointer_verbose: bool = False,
-               arena_override: GeneralArena or None = None):
+               arena_override: GeneralArena or None = None,
+               memory_override: GeneralMemoryBuffer or None = None):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
-        _, optimizer, memory = build_all_from_args(args, device)
+        _, optimizer, mem = build_all_from_args(args, device)
+        memory = mem if memory_override is None else memory_override
         checkpointer = CheckPointer(args["checkpoint_dir"], verbose=checkpointer_verbose)
         args = DotDict(args)
         return cls(network, game, optimizer, memory, args, checkpointer, search_tree, net_player, device,
@@ -139,6 +147,18 @@ class Trainer:
                 self.args["arena_tau"] = 0
             with th.no_grad():
                 self.logger.log(LoggingMessageTemplates.SELF_PLAY_START(self_play_games))
+                # wins_p1 = 0
+                # wins_p2 = 0
+                # game_draws = 0
+                # for j in self.make_tqdm_bar(range(self_play_games), "Self-Play Progress", 1, leave=False):
+                #     game_history, wins_one, wins_minus_one, draws = self.mcts.play_one_game(self.network, self.device)
+                #     # print(f"Game {j + 1} finished.")
+                #     self.mcts.step_root(None)  # reset the search tree
+                #     self.memory.add_list(game_history)
+                #     wins_p1 += wins_one
+                #     wins_p2 += wins_minus_one
+                #     game_draws += draws
+                print(f"Using db {self.store_in_db} and class {self.db_class_name}")
                 wins_p1, wins_p2, game_draws = self.parallel_self_play(self.args["num_workers"], self_play_games)
                 # cProfile.runctx("self.parallel_self_play(self.args['num_workers'], self_play_games)", globals(), locals(),
                 #                 "self_play_profiling.txt")
@@ -267,10 +287,13 @@ class Trainer:
         """
         networks = self.make_n_networks(n_jobs)
         trees = self.make_n_trees(n_jobs)
-        # assume network in shared memory
         num_games = n_games // n_jobs
-        futures = [self_play.remote(networks[i], trees[i], num_games, copy.deepcopy(self.device)) for i in range(n_jobs)]
-        results = ray.get(futures)
+        print(f"Starting parallel self-play with {n_jobs} processes (games per process: {num_games})")
+        chunks = [(net, tree, num_games, self.device, False, "") for net, tree in zip(networks, trees)]
+        num_gpus = 1 / n_jobs
+        with Pool(processes=n_jobs,
+                  ray_remote_args={"num_cpus": 1, "memory": 12 * 1024 * 1024 * 1024, "num_gpus": num_gpus}) as pool:
+            results = pool.map(self_play, chunks)
         wins_one = 0
         wins_two = 0
         draws = 0
@@ -343,12 +366,26 @@ class Trainer:
         return self.network
 
 
-@ray.remote(num_cpus=16,num_gpus=1)
-def self_play(network, tree, num_games, device) -> list:
-    results = []
+def self_play(chunk) -> list:
+    network, tree, num_games, device, store_in_db, db_class_name = chunk
+    if store_in_db:
+        if db_class_name is None:
+            raise ValueError("db_class_path must be specified if store_in_db is True.")
+        db_class = getattr(mem_buffer, db_class_name)
+        db = db_class()
+    else:
+        results = []
+
+    wins_1, wins_2, drs = 0, 0, 0
     for game in range(num_games):
         game_history, wins_one, wins_two, draws = tree.play_one_game(network, device)
         # print(f"Game {game + 1} finished.", file=open("self_play_log.txt", "a"))
         tree.step_root(None)
-        results.append([game_history, wins_one, wins_two, draws])
-    return results
+        if store_in_db:
+            db.add_list(game_history)
+        else:
+            results.append((game_history, wins_one, wins_two, draws))
+        wins_1 += wins_one
+        wins_2 += wins_two
+        drs += draws
+    return [wins_1, wins_2, drs] if store_in_db else results

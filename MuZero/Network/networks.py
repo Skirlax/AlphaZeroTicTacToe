@@ -1,3 +1,4 @@
+import json
 import math
 
 import numpy as np
@@ -5,9 +6,10 @@ import torch as th
 import torch.nn.functional as F
 from torch import nn
 from torch.nn.functional import mse_loss
-
+import pickle
 from AlphaZero.Network.nnet import TicTacToeNet as PredictionNet
 from General.network import GeneralNetwork
+from General.memory import GeneralMemoryBuffer
 from MuZero.utils import match_action_with_obs_batch, scale_reward_value
 from mem_buffer import MemBuffer
 
@@ -70,39 +72,45 @@ class MuZeroNet(th.nn.Module, GeneralNetwork):
         return MuZeroNet(args["num_net_in_channels"], args["net_dropout"], args["net_action_size"],
                          args["num_net_channels"], args["net_latent_size"], args["num_net_out_channels"])
 
-    def train_net(self, memory_buffer: MemBuffer, args: dict):
+    def train_net(self, memory_buffer: GeneralMemoryBuffer, args: dict):
         # TODO: Might need to mask invalid actions in the future.
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
         losses = []
         K = args["K"]
         optimizer = th.optim.Adam(self.parameters(), lr=args["lr"])
-        memory_buffer.make_fresh_temp_buffer()
-        for epoch in range(args["epochs"]):
-            for experience_batch, priorities in memory_buffer.batch_with_priorities(args["batch_size"], K,
-                                                                                    alpha=args["alpha"]):
-                if len(experience_batch) <= 1:
-                    continue
-                pis, vs, rews_moves, states = zip(*experience_batch)
-                rews = [x[0] for x in rews_moves]
-                moves = [x[1] for x in rews_moves]
-                states = th.tensor(np.array(states), dtype=th.float32, device=device).permute(0, 3, 1, 2)
-                pis = [list(x.values()) for x in pis]
-                pis = th.tensor(np.array(pis), dtype=th.float32, device=device)
-                vs = th.tensor(np.array(vs), dtype=th.float32, device=device).unsqueeze(1)
-                rews = th.tensor(np.array(rews), dtype=th.float32, device=device).unsqueeze(1)
-                # moves = th.tensor(np.array(moves), dtype=th.float32, device=device)
-                latent = self.representation_forward(states)
-                pred_pis, pred_vs = self.prediction_forward(latent)
-                latent = match_action_with_obs_batch(latent, moves)
-                _, pred_rews = self.dynamics_forward(latent)
-                priorities = th.tensor(np.array(priorities), dtype=th.float32, device=device).reshape(rews.shape)
-                loss = mse_loss(pred_vs, vs) + self.muzero_pi_loss(pred_pis, pis) + mse_loss(pred_rews, rews)
-                balance_term = 1 / (len(memory_buffer) * priorities)
-                # loss *= th.sum(balance_term)
-                losses.append(loss.item())
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+        for experience_batch, priorities in memory_buffer.batch_with_priorities(args["epochs"],args["batch_size"], K,
+                                                                                alpha=args["alpha"]):
+            if len(experience_batch) <= 1:
+                continue
+            pis, vs, rews_moves, states = zip(*experience_batch)
+            # pis = [json.loads(x) for x in pis]
+            rews = [x[0] for x in rews_moves]
+            moves = [x[1] for x in rews_moves]
+            # states = [pickle.loads(x) for x in states]
+            states = th.tensor(np.array(states), dtype=th.float32, device=device).permute(0, 3, 1, 2)
+            pis = [list(x.values()) for x in pis]
+            pis = th.tensor(np.array(pis), dtype=th.float32, device=device)
+            vs = th.tensor(np.array(vs), dtype=th.float32, device=device).unsqueeze(1)
+            rews = th.tensor(np.array(rews), dtype=th.float32, device=device).unsqueeze(1)
+            # moves = th.tensor(np.array(moves), dtype=th.float32, device=device)
+            latent = self.representation_forward(states)
+            pred_pis, pred_vs = self.prediction_forward(latent)
+            latent = match_action_with_obs_batch(latent, moves)
+            _, pred_rews = self.dynamics_forward(latent)
+            # priorities = priorities.unsqueeze(1)
+            priorities = priorities.to(device)
+            w = (1 / (len(memory_buffer) * priorities)) ** args["beta"]
+            w /= w.max()
+            loss_v = mse_loss(pred_vs, vs) * w
+            loss_pi = self.muzero_pi_loss(pred_pis, pis) * w
+            loss_r = mse_loss(pred_rews, rews) * w
+            loss = loss_v.sum() + loss_pi.sum() + loss_r.sum()
+            # loss = mse_loss(pred_vs, vs) + self.muzero_pi_loss(pred_pis, pis) + mse_loss(pred_rews, rews)
+            # loss *= th.sum(balance_term)
+            losses.append(loss.item())
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
         return sum(losses) / len(losses)
 
     def muzero_pi_loss(self, y_hat, y):

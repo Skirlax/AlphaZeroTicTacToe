@@ -91,16 +91,17 @@ class TicTacToeGameManager(Game):
         return results
 
     def eval_board(self, board: np.ndarray) -> int | None:
-        # score = 0
-        current_won = self.check_partial_win(-1,self.num_to_win,board=board)
-        opp_won = self.check_partial_win(1,self.num_to_win,board=board)
-        if current_won:
-            return 1
-        if opp_won:
-            return -1
-        if self.is_board_full(board=board):
+        if self.is_board_full(board):
             return 0
-        return None
+        score = 0
+        for i in range(self.num_to_win, self.num_to_win // 2, -1):
+            current_won = self.check_partial_win(-1, self.num_to_win, board=board)
+            opp_won = self.check_partial_win(1, self.num_to_win, board=board)
+            if current_won:
+                score += 1
+            elif opp_won:
+                score -= 1
+        return None if score == 0 else score
 
     def full_iterate_array_all_diags(self, arr: np.ndarray, func: callable):
 

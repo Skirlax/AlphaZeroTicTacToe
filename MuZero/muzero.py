@@ -16,7 +16,8 @@ from General.network import GeneralNetwork
 from MuZero.MZ_Arena.arena import MzArena
 from MuZero.MZ_MCTS.mz_search_tree import MuZeroSearchTree
 from MuZero.Network.networks import MuZeroNet
-
+from mem_buffer import MongoDBMemBuffer
+import ray
 
 class MuZero:
     """
@@ -55,12 +56,13 @@ class MuZero:
                                **{"network": network, "monte_carlo_tree_search": tree})
         args = DotDict(args)
         args.self_play_games = 300
-        args.epochs = 500
+        args.epochs = 800
         args.lr = 0.0032485504583772953
         args.tau = 1.0
         args.c = 1
         args.arena_tau = 0.04139160592420218
         arena = MzArena(self.game_manager.make_fresh_instance(), args, self.device)
+        # memory.drop_game_data()
         self.trainer = Trainer.create(args, self.game_manager.make_fresh_instance(), network, tree, net_player,
                                       headless=headless,
                                       checkpointer_verbose=checkpointer_verbose, arena_override=arena)
@@ -71,6 +73,7 @@ class MuZero:
 
 
 if __name__ == "__main__":
+    ray.init(num_cpus=22, num_gpus=1, _memory=150 * 1024 * 1024 * 1024)
     game = Asteroids()
     mz = MuZero(game)
     mz.create_new(SAMPLE_MZ_ARGS, MuZeroNet)

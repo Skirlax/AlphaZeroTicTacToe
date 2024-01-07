@@ -1,6 +1,6 @@
 import torch as th
 
-from AlphaZero.MCTS.az_node import Node
+from AlphaZero.MCTS.az_node import AlphaZeroNode
 from AlphaZero.utils import augment_experience_with_symmetries, mask_invalid_actions, DotDict
 from Game.tictactoe_game import TicTacToeGameManager
 from General.search_tree import SearchTree
@@ -76,7 +76,7 @@ class McSearchTree(SearchTree):
         if tau is None:
             tau = self.args["tau"]
         if self.root_node is None:
-            self.root_node = Node(current_player, times_visited_init=0)
+            self.root_node = AlphaZeroNode(current_player, times_visited_init=0)
         state_ = self.game_manager.get_canonical_form(state, current_player)
         # state_ = make_channels_from_single(state_)
         state_ = th.tensor(state_, dtype=th.float32, device=device).unsqueeze(0)

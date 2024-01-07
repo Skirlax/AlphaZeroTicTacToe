@@ -2,11 +2,13 @@ import copy
 
 import numpy as np
 import torch as th
-
+from bson import Binary
+import pickle
+import json
 from Game.tictactoe_game import TicTacToeGameManager
 from General.mz_game import MuZeroGame
 from General.search_tree import SearchTree
-from MuZero.MZ_MCTS.mz_node import MzNode
+from MuZero.MZ_MCTS.mz_node import MzAlphaZeroNode
 from MuZero.utils import match_action_with_obs, resize_obs, scale_action
 from mem_buffer import MuZeroFrameBuffer
 
@@ -27,16 +29,21 @@ class MuZeroSearchTree(SearchTree):
         self.buffer.init_buffer(state)
         data = []
         for step in range(num_steps):
-            pi, v = self.search(network_wrapper, state, None, device)
+            pi, v, latent = self.search(network_wrapper, state, None, device)
             # print(f"Search at {step} finished",file=open("search.txt", "a"))
             move = TicTacToeGameManager.select_move(pi)
+            state = match_action_with_obs(latent, move)
+            _, pred_rew = network_wrapper.dynamics_forward(state.unsqueeze(0), predict=True)
             state, rew, done = self.game_manager.frame_skip_wrapper(move, None, frame_skip=frame_skip)
             state = resize_obs(state, (96, 96))
             if done:
                 break
             move = scale_action(move, self.game_manager.get_num_actions())
-            data.append((pi, v, (rew, move), self.buffer.concat_frames()))
+            data.append((pi, v, (rew, move, float(pred_rew[0][0])), self.buffer.concat_frames()))
             self.buffer.add_frame(state, move)
+
+        # data = [{"probabilities": json.dumps(pi), "vs": v, "pred_reward": pred_rew, "t_reward": rew, "game_state": Binary(pickle.dumps(state)), "game_move": move} for
+        #         pi, v, (rew, move, pred_rew), state in data]
         return data, 1, 1, 1
 
     def search(self, network_wrapper, state: np.ndarray, current_player: int or None, device: th.device,
@@ -47,7 +54,7 @@ class MuZeroSearchTree(SearchTree):
         if tau is None:
             tau = self.args["tau"]
 
-        root_node = MzNode()
+        root_node = MzAlphaZeroNode()
         # state_ = th.tensor(state, dtype=th.float32, device=device).unsqueeze(0)
         # transpose to channels first
         state_ = network_wrapper.representation_forward(
@@ -77,7 +84,7 @@ class MuZeroSearchTree(SearchTree):
                 current_node.expand_node(next_state, pi, reward)
             self.backprop(v, path)
 
-        return root_node.get_self_action_probabilities(tau=tau), root_node.get_self_value()
+        return root_node.get_self_action_probabilities(tau=tau), root_node.get_self_value(), root_node.get_latent()
 
     def backprop(self, v, path):
         G = v

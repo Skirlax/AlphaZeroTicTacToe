@@ -124,12 +124,31 @@ def human_minimax_play():
     device = th.device("cuda" if th.cuda.is_available() else "cpu")
     arena = Arena(manager.make_fresh_instance(), args, device)
     net_wins, human_wins, draws = arena.pit(p1, p2, num_games_to_play=10, num_mc_simulations=1317, one_player=True,
-                                            start_player=1, add_to_kwargs={"depth": 5, "player": -1}, debug=True)
+                                            start_player=1, add_to_kwargs={"depth": 1, "player": -1}, debug=True)
+
+
+def ai_minimax_play():
+    args = DotDict(args_)
+    args.num_simulations = 1317
+    args.self_play_games = 300
+    args.epochs = 500
+    args.lr = 0.0032485504583772953
+    args.tau = 1.0
+    args.c = 1
+    args.arena_tau = 0.04139160592420218
+    net = make_net_from_checkpoint("/home/skyr/PycharmProjects/AlphaZeroTicTacToe/Nets/8x8_test/improved_net_12.pth",
+                                   args)
+    net.eval()
+    manager = GameManager(8, headless=False, num_to_win=5)
+    search_tree = McSearchTree(manager, args)
+    p1 = NetPlayer(manager, **{"network": net, "monte_carlo_tree_search": search_tree})
+    p2 = MinimaxPlayer(manager,
+                       **{"evaluate_fn": manager.eval_board})
 
 
 if __name__ == "__main__":
-    # human_minimax_play()
-    main_mu_zero_find_hyperparameters()
+    human_minimax_play()
+    # main_mu_zero_find_hyperparameters()
     # play()
     #
     # main_alpha_zero()

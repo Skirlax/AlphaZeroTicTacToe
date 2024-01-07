@@ -5,7 +5,7 @@ import numpy as np
 from Game.tictactoe_game import TicTacToeGameManager as GameManager
 
 
-class Node:
+class AlphaZeroNode:
     """
     This class defines a node in the search tree. It stores all the information needed for DeepMind's AlphaZero algorithm.
     """
@@ -32,7 +32,7 @@ class Node:
         self.state = state.copy()  # copying here is probably not necessary.
 
         for action, probability in enumerate(action_probabilities):
-            node = Node(self.current_player * (-1), select_probability=probability, parent=self)
+            node = AlphaZeroNode(self.current_player * (-1), select_probability=probability, parent=self)
             self.children[action] = node
 
     def was_visited(self):
